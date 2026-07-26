@@ -60,10 +60,17 @@ public class VitalSignsMeasurementService
             .Select(p => p.TrainingSessionId)
             .Distinct();
 
-        var sessionTasks = uniqueSessionIds.Select(id => _sessionRepo.GetByIdAsync(id, ct));
-        var sessions = (await Task.WhenAll(sessionTasks))
-            .Where(s => s is not null)
-            .ToDictionary(s => s!.TrainingSessionId);
+        // Las sesiones se cargan SECUENCIALMENTE, no con Task.WhenAll.
+        // El DbContext es scoped y EF Core no admite operaciones concurrentes sobre la
+        // misma instancia: en cuanto un aspirante participaba en dos sesiones, WhenAll
+        // lanzaba las consultas en paralelo y reventaba con
+        // "A second operation was started on this context instance...".
+        var sessions = new Dictionary<Guid, TrainingSession>();
+        foreach (var sessionId in uniqueSessionIds)
+        {
+            var session = await _sessionRepo.GetByIdAsync(sessionId, ct);
+            if (session is not null) sessions[session.TrainingSessionId] = session;
+        }
 
         return vitals
             .Where(v => participants.ContainsKey(v.SessionParticipantId))
