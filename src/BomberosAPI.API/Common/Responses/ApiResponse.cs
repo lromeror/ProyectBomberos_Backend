@@ -1,14 +1,17 @@
+using System.Text.Json.Serialization;
+
 namespace BomberosAPI.API.Common.Responses;
 
 public class ApiResponse<T>
 {
-    public bool Success { get; private set; }
-    public int StatusCode { get; private set; }
-    public string? Message { get; private set; }
-    public T? Data { get; private set; }
-    public IReadOnlyDictionary<string, string[]>? Errors { get; private set; }
+    public bool Success { get; set; }
+    public int StatusCode { get; set; }
+    public string? Message { get; set; }
+    public T? Data { get; set; }
+    public IReadOnlyDictionary<string, string[]>? Errors { get; set; }
 
-    private ApiResponse() { }
+    [JsonConstructor]
+    public ApiResponse() { }
 
     public static ApiResponse<T> Ok(T data, string? message = null) => new()
     {

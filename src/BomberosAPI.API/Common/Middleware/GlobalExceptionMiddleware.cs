@@ -69,7 +69,7 @@ public class GlobalExceptionMiddleware
         _logger.LogError(ex, "Unexpected error: {Message}", ex.Message);
 
         var message = _env.IsDevelopment()
-            ? ex.Message
+            ? ex.ToString()
             : "An unexpected error occurred. Please try again later.";
 
         return ApiResponse<object?>.Fail(500, message);

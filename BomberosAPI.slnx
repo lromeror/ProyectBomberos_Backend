@@ -9,5 +9,6 @@
     <Project Path="tests/BomberosAPI.Domain.UnitTests/BomberosAPI.Domain.UnitTests.csproj" />
     <Project Path="tests/BomberosAPI.Application.UnitTests/BomberosAPI.Application.UnitTests.csproj" />
     <Project Path="tests/BomberosAPI.API.UnitTests/BomberosAPI.API.UnitTests.csproj" />
+    <Project Path="tests/BomberosAPI.AcceptanceTests/BomberosAPI.AcceptanceTests.csproj" />
   </Folder>
 </Solution>

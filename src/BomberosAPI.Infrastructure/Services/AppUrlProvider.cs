@@ -9,6 +9,8 @@ public class AppUrlProvider : IAppUrlProvider
 
     public AppUrlProvider(IOptions<AppUrlSettings> options)
     {
-        WebBaseUrl = options.Value.WebBaseUrl.TrimEnd('/');
+        WebBaseUrl = !string.IsNullOrWhiteSpace(options.Value?.WebBaseUrl)
+            ? options.Value.WebBaseUrl.TrimEnd('/')
+            : "http://localhost:3000";
     }
 }
