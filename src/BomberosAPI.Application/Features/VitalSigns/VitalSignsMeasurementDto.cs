@@ -9,5 +9,8 @@ public record VitalSignsMeasurementDto(
     decimal? DiastolicPressure,
     decimal? TemperatureC,
     decimal? Spo2,
+    string? PracticeRole,
+    bool? IsSmoker,
+    bool? ExposedToSmoke48h,
     DateTime TakenAt
 );

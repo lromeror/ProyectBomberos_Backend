@@ -10,5 +10,6 @@ public record HealthPersonnelDto(
     string? Profession,
     string? Specialty,
     string? LicenseNumber,
-    bool   CanApproveDischarges
+    bool   CanApproveDischarges,
+    bool   IsActive
 );

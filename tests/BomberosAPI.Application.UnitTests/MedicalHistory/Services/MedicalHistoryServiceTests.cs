@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using BomberosAPI.Application.Common.Exceptions;
+using BomberosAPI.Application.Features.Audit;
 using BomberosAPI.Application.Features.MedicalHistory;
 using BomberosAPI.Domain.Entities;
 using BomberosAPI.Domain.Repositories;
@@ -22,6 +23,7 @@ public class MedicalHistoryServiceTests
     private readonly Mock<ITraineeFirefighterRepository> _mockTraineeRepo;
     private readonly Mock<IHealthPersonnelRepository> _mockHpRepo;
     private readonly Mock<IValidator<CreateMedicalHistoryRequest>> _mockValidator;
+    private readonly Mock<IChangeAuditRepository> _mockChangeAuditRepo;
     private readonly MedicalHistoryService _sut;
 
     public MedicalHistoryServiceTests()
@@ -30,13 +32,15 @@ public class MedicalHistoryServiceTests
         _mockTraineeRepo = new Mock<ITraineeFirefighterRepository>();
         _mockHpRepo = new Mock<IHealthPersonnelRepository>();
         _mockValidator = new Mock<IValidator<CreateMedicalHistoryRequest>>();
+        _mockChangeAuditRepo = new Mock<IChangeAuditRepository>();
 
         _mockValidator
             .Setup(v => v.ValidateAsync(It.IsAny<CreateMedicalHistoryRequest>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new ValidationResult());
 
         _sut = new MedicalHistoryService(
-            _mockRepo.Object, _mockTraineeRepo.Object, _mockHpRepo.Object, _mockValidator.Object);
+            _mockRepo.Object, _mockTraineeRepo.Object, _mockHpRepo.Object, _mockValidator.Object,
+            new ChangeAuditService(_mockChangeAuditRepo.Object));
     }
 
     [Fact]
@@ -101,7 +105,7 @@ public class MedicalHistoryServiceTests
         _mockHpRepo.Setup(r => r.GetByIdAsync(hpId, It.IsAny<CancellationToken>())).ReturnsAsync(new BomberosAPI.Domain.Entities.HealthPersonnel());
         _mockRepo.Setup(r => r.ExistsByTraineeAsync(traineeId, It.IsAny<CancellationToken>())).ReturnsAsync(false);
 
-        var result = await _sut.CreateAsync(request);
+        var result = await _sut.CreateAsync(request, Guid.NewGuid());
 
         result.Should().NotBeNull();
         result.Allergies.Should().Be("None");
@@ -115,7 +119,7 @@ public class MedicalHistoryServiceTests
         var validationResult = new ValidationResult(new[] { new ValidationFailure("TraineeFirefighterId", "Required") });
         _mockValidator.Setup(v => v.ValidateAsync(request, It.IsAny<CancellationToken>())).ReturnsAsync(validationResult);
 
-        var act = async () => await _sut.CreateAsync(request);
+        var act = async () => await _sut.CreateAsync(request, Guid.NewGuid());
 
         await act.Should().ThrowAsync<ValidationException>();
     }
@@ -126,7 +130,7 @@ public class MedicalHistoryServiceTests
         var request = new CreateMedicalHistoryRequest(Guid.NewGuid(), Guid.NewGuid(), "None", "None", "None", "None");
         _mockTraineeRepo.Setup(r => r.GetByIdAsync(request.TraineeFirefighterId, It.IsAny<CancellationToken>())).ReturnsAsync((TraineeFirefighter)null!);
 
-        var act = async () => await _sut.CreateAsync(request);
+        var act = async () => await _sut.CreateAsync(request, Guid.NewGuid());
 
         await act.Should().ThrowAsync<NotFoundException>();
     }
@@ -140,7 +144,7 @@ public class MedicalHistoryServiceTests
         _mockHpRepo.Setup(r => r.GetByIdAsync(request.CreatedByHealthPersonnelId, It.IsAny<CancellationToken>())).ReturnsAsync(new BomberosAPI.Domain.Entities.HealthPersonnel());
         _mockRepo.Setup(r => r.ExistsByTraineeAsync(traineeId, It.IsAny<CancellationToken>())).ReturnsAsync(true);
 
-        var act = async () => await _sut.CreateAsync(request);
+        var act = async () => await _sut.CreateAsync(request, Guid.NewGuid());
 
         await act.Should().ThrowAsync<ConflictException>();
     }
@@ -154,7 +158,7 @@ public class MedicalHistoryServiceTests
 
         _mockRepo.Setup(r => r.GetByIdAsync(id, It.IsAny<CancellationToken>())).ReturnsAsync(mh);
 
-        var result = await _sut.UpdateAsync(id, request);
+        var result = await _sut.UpdateAsync(id, request, Guid.NewGuid());
 
         result.Should().NotBeNull();
         result.Allergies.Should().Be("New");

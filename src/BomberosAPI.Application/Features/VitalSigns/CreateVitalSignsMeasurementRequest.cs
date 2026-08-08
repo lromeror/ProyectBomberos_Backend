@@ -7,5 +7,8 @@ public record CreateVitalSignsMeasurementRequest(
     decimal? SystolicPressure,
     decimal? DiastolicPressure,
     decimal? TemperatureC,
-    decimal? Spo2
+    decimal? Spo2,
+    string? PracticeRole,
+    bool? IsSmoker,
+    bool? ExposedToSmoke48h
 );

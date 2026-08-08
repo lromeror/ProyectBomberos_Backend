@@ -1,4 +1,5 @@
 ﻿using BomberosAPI.API.Common.Responses;
+using BomberosAPI.Application.Common.Constants;
 using BomberosAPI.Application.Features.HealthPersonnel;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -35,6 +36,7 @@ public class HealthPersonnelController : ControllerBase
     }
 
     [HttpPost]
+    [Authorize(Roles = Roles.Admin + "," + Roles.SystemAdmin)]
     [ProducesResponseType(typeof(ApiResponse<HealthPersonnelDto>), StatusCodes.Status201Created)]
     [ProducesResponseType(typeof(ApiResponse<object?>), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ApiResponse<object?>), StatusCodes.Status404NotFound)]
@@ -45,4 +47,26 @@ public class HealthPersonnelController : ControllerBase
         return CreatedAtAction(nameof(GetById), new { id = hp.HealthPersonnelId },
             ApiResponse<HealthPersonnelDto>.Created(hp));
     }
+
+    [HttpPut("{id:guid}")]
+    [Authorize(Roles = Roles.Admin + "," + Roles.SystemAdmin)]
+    [ProducesResponseType(typeof(ApiResponse<HealthPersonnelDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiResponse<object?>), StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> Update(Guid id, [FromBody] UpdateHealthPersonnelRequest request, CancellationToken ct)
+    {
+        var hp = await _service.UpdateAsync(id, request, ct);
+        return Ok(ApiResponse<HealthPersonnelDto>.Ok(hp));
+    }
+
+    [HttpPatch("{id:guid}/status")]
+    [Authorize(Roles = Roles.Admin + "," + Roles.SystemAdmin)]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(typeof(ApiResponse<object?>), StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> SetStatus(Guid id, [FromBody] SetHealthPersonnelStatusRequest request, CancellationToken ct)
+    {
+        await _service.SetActiveAsync(id, request.IsActive, ct);
+        return NoContent();
+    }
 }
+
+public record SetHealthPersonnelStatusRequest(bool IsActive);

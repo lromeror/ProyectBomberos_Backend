@@ -66,8 +66,32 @@ public class HealthPersonnelService
         return ToDto(hp);
     }
 
+    public async Task<HealthPersonnelDto> UpdateAsync(Guid id, UpdateHealthPersonnelRequest request, CancellationToken ct = default)
+    {
+        var hp = await _repo.GetByIdAsync(id, ct)
+            ?? throw new NotFoundException("HealthPersonnel", id);
+
+        hp.Profession = request.Profession;
+        hp.Specialty = request.Specialty;
+        hp.LicenseNumber = request.LicenseNumber;
+        hp.CanApproveDischarges = request.CanApproveDischarges;
+
+        await _repo.UpdateAsync(hp, ct);
+        return ToDto(hp);
+    }
+
+    /// <summary>Activa/desactiva (borrado lógico) un perfil de personal médico.</summary>
+    public async Task SetActiveAsync(Guid id, bool isActive, CancellationToken ct = default)
+    {
+        var hp = await _repo.GetByIdAsync(id, ct)
+            ?? throw new NotFoundException("HealthPersonnel", id);
+
+        hp.IsActive = isActive;
+        await _repo.UpdateAsync(hp, ct);
+    }
+
     private static HealthPersonnelDto ToDto(HealthPersonnelEntity h) => new(
         h.HealthPersonnelId, h.UserId,
         h.User?.FirstName ?? "", h.User?.LastName ?? "", h.User?.Email ?? "", h.User?.Phone,
-        h.Profession, h.Specialty, h.LicenseNumber, h.CanApproveDischarges);
+        h.Profession, h.Specialty, h.LicenseNumber, h.CanApproveDischarges, h.IsActive);
 }

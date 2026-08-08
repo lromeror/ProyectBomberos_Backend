@@ -1,12 +1,20 @@
 using BomberosAPI.Application.Common.Interfaces;
+using BomberosAPI.Application.Features.Audit;
 using BomberosAPI.Application.Features.Auth;
+using BomberosAPI.Application.Features.BioimpedanceMeasurements;
+using BomberosAPI.Application.Features.Consents;
+using BomberosAPI.Application.Features.CriticalAlerts;
+using BomberosAPI.Application.Features.DSARRequests;
 using BomberosAPI.Application.Features.EnvironmentalData;
 using BomberosAPI.Application.Features.HealthPersonnel;
 using BomberosAPI.Application.Features.Institutions;
 using BomberosAPI.Application.Features.Invitations;
 using BomberosAPI.Application.Features.MedicalHistory;
 using BomberosAPI.Application.Features.Participants;
+using BomberosAPI.Application.Features.Reports;
 using BomberosAPI.Application.Features.Roles;
+using BomberosAPI.Application.Features.SessionResults;
+using BomberosAPI.Application.Features.SymptomReports;
 using BomberosAPI.Application.Features.TraineeFirefighters;
 using BomberosAPI.Application.Features.TrainingLocations;
 using BomberosAPI.Application.Features.TrainingSessions;
@@ -29,11 +37,20 @@ public static class DependencyInjection
     {
         services.Configure<JwtSettings>(configuration.GetSection(JwtSettings.SectionName));
 
+        services.AddScoped<IAccessAuditRepository, AccessAuditRepository>();
+        services.AddScoped<AccessAuditService>();
+        services.AddScoped<IChangeAuditRepository, ChangeAuditRepository>();
+        services.AddScoped<ChangeAuditService>();
+
         services.AddScoped<IPasswordHasher, PasswordHasher>();
         services.AddScoped<IJwtTokenService, JwtTokenService>();
         services.AddScoped<IAuthRepository, AuthRepository>();
+        services.AddScoped<IAuthSessionRepository, AuthSessionRepository>();
+        services.AddScoped<AuthSessionService>();
+        services.AddScoped<IValidator<Application.Features.Auth.ChangePasswordRequest>, Application.Features.Auth.ChangePasswordRequestValidator>();
 
         services.AddScoped<IUserRepository, UserRepository>();
+        services.AddScoped<IUserRoleRepository, UserRoleRepository>();
         services.AddScoped<UserService>();
         services.AddScoped<IValidator<CreateUserRequest>, CreateUserValidator>();
 
@@ -78,6 +95,29 @@ public static class DependencyInjection
         services.AddScoped<IEnvironmentalDataRepository, EnvironmentalDataRepository>();
         services.AddScoped<EnvironmentalDataService>();
         services.AddScoped<IValidator<CreateEnvironmentalDataRequest>, CreateEnvironmentalDataValidator>();
+
+        services.AddScoped<ISymptomReportRepository, SymptomReportRepository>();
+        services.AddScoped<SymptomReportService>();
+        services.AddScoped<IValidator<CreateSymptomReportRequest>, CreateSymptomReportValidator>();
+
+        services.AddScoped<IBioimpedanceMeasurementRepository, BioimpedanceMeasurementRepository>();
+        services.AddScoped<BioimpedanceMeasurementService>();
+        services.AddScoped<IValidator<CreateBioimpedanceMeasurementRequest>, CreateBioimpedanceMeasurementValidator>();
+
+        services.AddScoped<IConsentDocumentRepository, ConsentDocumentRepository>();
+        services.AddScoped<IUserConsentRepository, UserConsentRepository>();
+        services.AddScoped<ConsentService>();
+
+        services.AddScoped<IDSARRequestRepository, DSARRequestRepository>();
+        services.AddScoped<DSARRequestService>();
+
+        services.AddScoped<ICriticalAlertRepository, CriticalAlertRepository>();
+        services.AddScoped<CriticalAlertService>();
+
+        services.AddScoped<ISessionResultRepository, SessionResultRepository>();
+        services.AddScoped<SessionResultService>();
+
+        services.AddScoped<ReportService>();
 
         return services;
     }

@@ -1,4 +1,5 @@
 ﻿using BomberosAPI.Application.Common.Exceptions;
+using BomberosAPI.Application.Features.Audit;
 using BomberosAPI.Domain.Entities;
 using BomberosAPI.Domain.Repositories;
 using FluentValidation;
@@ -8,15 +9,26 @@ namespace BomberosAPI.Application.Features.TraineeFirefighters;
 
 public class TraineeFirefighterService
 {
+    // Domain.Enums.TrainingStatus define estos valores, pero TraineeFirefighter.TrainingStatus
+    // es un string plano — sin esta lista, el endpoint aceptaba cualquier texto como
+    // estado válido.
+    private static readonly HashSet<string> ValidTrainingStatuses = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "Active", "Suspended", "Graduated", "Withdrawn",
+    };
+
     private readonly ITraineeFirefighterRepository _repo;
     private readonly IValidator<CreateTraineeFirefighterRequest> _createValidator;
+    private readonly ChangeAuditService _changeAudit;
 
     public TraineeFirefighterService(
         ITraineeFirefighterRepository repo,
-        IValidator<CreateTraineeFirefighterRequest> createValidator)
+        IValidator<CreateTraineeFirefighterRequest> createValidator,
+        ChangeAuditService changeAudit)
     {
         _repo = repo;
         _createValidator = createValidator;
+        _changeAudit = changeAudit;
     }
 
     public async Task<IReadOnlyList<TraineeFirefighterDto>> GetAllAsync(CancellationToken ct = default)
@@ -75,13 +87,22 @@ public class TraineeFirefighterService
         return ToDto(trainee);
     }
 
-    public async Task SetTrainingStatusAsync(Guid id, string status, CancellationToken ct = default)
+    public async Task SetTrainingStatusAsync(Guid id, string status, Guid actingUserId, CancellationToken ct = default)
     {
+        if (!ValidTrainingStatuses.Contains(status))
+            throw new BusinessRuleException($"'{status}' is not a valid training status.");
+
         var trainee = await _repo.GetByIdAsync(id, ct)
             ?? throw new NotFoundException("TraineeFirefighter", id);
 
+        var previousStatus = trainee.TrainingStatus;
         trainee.TrainingStatus = status;
         await _repo.UpdateAsync(trainee, ct);
+
+        await _changeAudit.LogAsync(actingUserId, "TraineeFirefighter", id, "TrainingStatusChange",
+            new Dictionary<string, object?> { ["trainingStatus"] = previousStatus },
+            new Dictionary<string, object?> { ["trainingStatus"] = trainee.TrainingStatus },
+            ct);
     }
 
     private static TraineeFirefighterDto ToDto(TraineeFirefighter t) => new(

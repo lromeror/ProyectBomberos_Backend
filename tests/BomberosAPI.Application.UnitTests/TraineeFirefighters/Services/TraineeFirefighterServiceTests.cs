@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using BomberosAPI.Application.Common.Exceptions;
+using BomberosAPI.Application.Features.Audit;
 using BomberosAPI.Application.Features.TraineeFirefighters;
 using BomberosAPI.Domain.Entities;
 using BomberosAPI.Domain.Repositories;
@@ -19,19 +20,22 @@ public class TraineeFirefighterServiceTests
 {
     private readonly Mock<ITraineeFirefighterRepository> _mockRepo;
     private readonly Mock<IValidator<CreateTraineeFirefighterRequest>> _mockValidator;
+    private readonly Mock<IChangeAuditRepository> _mockChangeAuditRepo;
     private readonly TraineeFirefighterService _sut;
 
     public TraineeFirefighterServiceTests()
     {
         _mockRepo = new Mock<ITraineeFirefighterRepository>();
         _mockValidator = new Mock<IValidator<CreateTraineeFirefighterRequest>>();
+        _mockChangeAuditRepo = new Mock<IChangeAuditRepository>();
 
         // Por defecto, asumimos que el request pasa la validación FluentValidation
         _mockValidator
             .Setup(v => v.ValidateAsync(It.IsAny<CreateTraineeFirefighterRequest>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new ValidationResult());
 
-        _sut = new TraineeFirefighterService(_mockRepo.Object, _mockValidator.Object);
+        _sut = new TraineeFirefighterService(_mockRepo.Object, _mockValidator.Object,
+            new ChangeAuditService(_mockChangeAuditRepo.Object));
     }
 
     [Fact]

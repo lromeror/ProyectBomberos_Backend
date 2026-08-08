@@ -16,5 +16,6 @@ public class HealthPersonnelConfiguration : IEntityTypeConfiguration<HealthPerso
         builder.Property(e => e.Specialty).HasColumnName("specialty").HasMaxLength(100);
         builder.Property(e => e.LicenseNumber).HasColumnName("license_number").HasMaxLength(50);
         builder.Property(e => e.CanApproveDischarges).HasColumnName("can_approve_discharges");
+        builder.Property(e => e.IsActive).HasColumnName("is_active").HasDefaultValue(true);
     }
 }

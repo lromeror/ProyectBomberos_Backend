@@ -1,4 +1,5 @@
 using BomberosAPI.API.Common.Responses;
+using BomberosAPI.Application.Common.Constants;
 using BomberosAPI.Application.Features.TrainingLocations;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -29,5 +30,26 @@ public class TrainingLocationsController : ControllerBase
     {
         var loc = await _service.GetByIdAsync(id, ct);
         return Ok(ApiResponse<TrainingLocationDto>.Ok(loc));
+    }
+
+    [HttpPost]
+    [Authorize(Roles = Roles.Admin + "," + Roles.SystemAdmin)]
+    [ProducesResponseType(typeof(ApiResponse<TrainingLocationDto>), StatusCodes.Status201Created)]
+    [ProducesResponseType(typeof(ApiResponse<object?>), StatusCodes.Status400BadRequest)]
+    public async Task<IActionResult> Create([FromBody] CreateTrainingLocationRequest request, CancellationToken ct)
+    {
+        var location = await _service.CreateAsync(request, ct);
+        return CreatedAtAction(nameof(GetById), new { id = location.TrainingLocationId },
+            ApiResponse<TrainingLocationDto>.Created(location));
+    }
+
+    [HttpPut("{id:guid}")]
+    [Authorize(Roles = Roles.Admin + "," + Roles.SystemAdmin)]
+    [ProducesResponseType(typeof(ApiResponse<TrainingLocationDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiResponse<object?>), StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> Update(Guid id, [FromBody] UpdateTrainingLocationRequest request, CancellationToken ct)
+    {
+        var location = await _service.UpdateAsync(id, request, ct);
+        return Ok(ApiResponse<TrainingLocationDto>.Ok(location));
     }
 }

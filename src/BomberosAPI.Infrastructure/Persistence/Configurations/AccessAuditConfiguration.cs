@@ -14,6 +14,8 @@ public class AccessAuditConfiguration : IEntityTypeConfiguration<AccessAudit>
         builder.Property(e => e.UserId).HasColumnName("user_id");
         builder.Property(e => e.AuthSessionId).HasColumnName("auth_session_id");
         builder.Property(e => e.Event).HasColumnName("event").HasMaxLength(100).IsRequired();
+        builder.Property(e => e.ResourceType).HasColumnName("resource_type").HasMaxLength(100);
+        builder.Property(e => e.ResourceId).HasColumnName("resource_id");
         builder.Property(e => e.Ip).HasColumnName("ip").HasMaxLength(45);
         builder.Property(e => e.UserAgent).HasColumnName("user_agent").HasMaxLength(500);
         builder.Property(e => e.Success).HasColumnName("success");

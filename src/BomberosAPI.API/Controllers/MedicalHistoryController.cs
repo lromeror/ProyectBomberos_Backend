@@ -1,4 +1,6 @@
 ﻿using BomberosAPI.API.Common.Responses;
+using BomberosAPI.Application.Common.Constants;
+using BomberosAPI.Application.Common.Interfaces;
 using BomberosAPI.Application.Features.MedicalHistory;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -11,10 +13,12 @@ namespace BomberosAPI.API.Controllers;
 public class MedicalHistoryController : ControllerBase
 {
     private readonly MedicalHistoryService _service;
+    private readonly ICurrentUserService _currentUser;
 
-    public MedicalHistoryController(MedicalHistoryService service)
+    public MedicalHistoryController(MedicalHistoryService service, ICurrentUserService currentUser)
     {
         _service = service;
+        _currentUser = currentUser;
     }
 
     [HttpGet]
@@ -44,23 +48,25 @@ public class MedicalHistoryController : ControllerBase
     }
 
     [HttpPost]
+    [Authorize(Roles = Roles.Medical)]
     [ProducesResponseType(typeof(ApiResponse<MedicalHistoryDto>), StatusCodes.Status201Created)]
     [ProducesResponseType(typeof(ApiResponse<object?>), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ApiResponse<object?>), StatusCodes.Status404NotFound)]
     [ProducesResponseType(typeof(ApiResponse<object?>), StatusCodes.Status409Conflict)]
     public async Task<IActionResult> Create([FromBody] CreateMedicalHistoryRequest request, CancellationToken ct)
     {
-        var mh = await _service.CreateAsync(request, ct);
+        var mh = await _service.CreateAsync(request, _currentUser.UserId, ct);
         return CreatedAtAction(nameof(GetById), new { id = mh.MedicalHistoryId },
             ApiResponse<MedicalHistoryDto>.Created(mh));
     }
 
     [HttpPut("{id:guid}")]
+    [Authorize(Roles = Roles.Medical)]
     [ProducesResponseType(typeof(ApiResponse<MedicalHistoryDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ApiResponse<object?>), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> Update(Guid id, [FromBody] UpdateMedicalHistoryRequest request, CancellationToken ct)
     {
-        var mh = await _service.UpdateAsync(id, request, ct);
+        var mh = await _service.UpdateAsync(id, request, _currentUser.UserId, ct);
         return Ok(ApiResponse<MedicalHistoryDto>.Ok(mh));
     }
 }

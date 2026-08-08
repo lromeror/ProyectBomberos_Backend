@@ -1,4 +1,5 @@
 ﻿using BomberosAPI.API.Common.Responses;
+using BomberosAPI.Application.Common.Constants;
 using BomberosAPI.Application.Features.VitalSigns;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -51,6 +52,7 @@ public class VitalSignsMeasurementsController : ControllerBase
     }
 
     [HttpPost]
+    [Authorize(Roles = Roles.Medical + "," + Roles.Admin + "," + Roles.SystemAdmin)]
     [ProducesResponseType(typeof(ApiResponse<VitalSignsMeasurementDto>), StatusCodes.Status201Created)]
     [ProducesResponseType(typeof(ApiResponse<object?>), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ApiResponse<object?>), StatusCodes.Status404NotFound)]

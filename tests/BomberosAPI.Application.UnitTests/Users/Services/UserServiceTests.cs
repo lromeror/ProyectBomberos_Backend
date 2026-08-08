@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using BomberosAPI.Application.Common.Exceptions;
+using BomberosAPI.Application.Features.Audit;
 using BomberosAPI.Application.Features.Users;
 using BomberosAPI.Domain.Entities;
 using BomberosAPI.Domain.Repositories;
@@ -17,19 +18,26 @@ namespace BomberosAPI.Application.UnitTests.Users.Services;
 public class UserServiceTests
 {
     private readonly Mock<IUserRepository> _mockRepo;
+    private readonly Mock<IRoleRepository> _mockRoleRepo;
+    private readonly Mock<IUserRoleRepository> _mockUserRoleRepo;
     private readonly Mock<IValidator<CreateUserRequest>> _mockValidator;
+    private readonly Mock<IChangeAuditRepository> _mockChangeAuditRepo;
     private readonly UserService _sut;
 
     public UserServiceTests()
     {
         _mockRepo = new Mock<IUserRepository>();
+        _mockRoleRepo = new Mock<IRoleRepository>();
+        _mockUserRoleRepo = new Mock<IUserRoleRepository>();
         _mockValidator = new Mock<IValidator<CreateUserRequest>>();
-        
+        _mockChangeAuditRepo = new Mock<IChangeAuditRepository>();
+
         _mockValidator
             .Setup(v => v.ValidateAsync(It.IsAny<CreateUserRequest>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new ValidationResult());
 
-        _sut = new UserService(_mockRepo.Object, _mockValidator.Object);
+        _sut = new UserService(_mockRepo.Object, _mockRoleRepo.Object, _mockUserRoleRepo.Object, _mockValidator.Object,
+            new ChangeAuditService(_mockChangeAuditRepo.Object));
     }
 
     [Fact]
@@ -72,7 +80,7 @@ public class UserServiceTests
     {
         var id = Guid.NewGuid();
         var user = new User { UserId = id, Email = "test@test.com" };
-        var request = new UpdateUserRequest("Jane", "Smith", "654321");
+        var request = new UpdateUserRequest("Jane", "Smith", "654321", "test@test.com");
         
         _mockRepo.Setup(r => r.GetByIdAsync(id, It.IsAny<CancellationToken>())).ReturnsAsync(user);
         
@@ -90,8 +98,8 @@ public class UserServiceTests
         var user = new User { UserId = id, AccountStatus = "active" };
         
         _mockRepo.Setup(r => r.GetByIdAsync(id, It.IsAny<CancellationToken>())).ReturnsAsync(user);
-        
-        await _sut.SetStatusAsync(id, "inactive");
+
+        await _sut.SetStatusAsync(id, "inactive", Guid.NewGuid());
         
         user.AccountStatus.Should().Be("inactive");
         _mockRepo.Verify(r => r.UpdateAsync(It.IsAny<User>(), It.IsAny<CancellationToken>()), Times.Once);

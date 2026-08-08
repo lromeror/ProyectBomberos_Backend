@@ -18,6 +18,9 @@ public class VitalSignsMeasurementConfiguration : IEntityTypeConfiguration<Vital
         builder.Property(e => e.DiastolicPressure).HasColumnName("diastolic_pressure").HasPrecision(5, 2);
         builder.Property(e => e.TemperatureC).HasColumnName("temperature_c").HasPrecision(4, 2);
         builder.Property(e => e.Spo2).HasColumnName("spo2").HasPrecision(4, 2);
+        builder.Property(e => e.PracticeRole).HasColumnName("practice_role").HasMaxLength(30);
+        builder.Property(e => e.IsSmoker).HasColumnName("is_smoker");
+        builder.Property(e => e.ExposedToSmoke48h).HasColumnName("exposed_to_smoke_48h");
         builder.Property(e => e.TakenAt).HasColumnName("taken_at");
     }
 }

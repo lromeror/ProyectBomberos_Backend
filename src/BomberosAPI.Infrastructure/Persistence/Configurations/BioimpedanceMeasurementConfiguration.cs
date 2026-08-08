@@ -18,6 +18,11 @@ public class BioimpedanceMeasurementConfiguration : IEntityTypeConfiguration<Bio
         builder.Property(e => e.MuscleMassKg).HasColumnName("muscle_mass_kg").HasPrecision(5, 2);
         builder.Property(e => e.BodyWaterPct).HasColumnName("body_water_pct").HasPrecision(4, 2);
         builder.Property(e => e.BasalMetabolicRate).HasColumnName("basal_metabolic_rate").HasPrecision(7, 2);
+        builder.Property(e => e.MetabolicAgeYears).HasColumnName("metabolic_age_years").HasPrecision(5, 2);
+        builder.Property(e => e.LactatePreMmol).HasColumnName("lactate_pre_mmol").HasPrecision(4, 2);
+        builder.Property(e => e.LactatePostMmol).HasColumnName("lactate_post_mmol").HasPrecision(4, 2);
+        builder.Property(e => e.StroopTimeSeconds).HasColumnName("stroop_time_seconds").HasPrecision(6, 2);
+        builder.Property(e => e.StroopErrors).HasColumnName("stroop_errors");
         builder.Property(e => e.TakenAt).HasColumnName("taken_at");
     }
 }

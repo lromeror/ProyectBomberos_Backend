@@ -119,16 +119,44 @@ public class InvitationServiceTests
     public async Task AcceptAsync_ValidPendingInvitation_ChangesStatusToAccepted()
     {
         var id = Guid.NewGuid();
-        var inv = new Invitation { InvitationId = id, Status = "Pending", ExpiresAt = DateTime.UtcNow.AddDays(1), TargetUserId = Guid.NewGuid(), TrainingSessionId = Guid.NewGuid() };
-        var trainee = new TraineeFirefighter { TraineeFirefighterId = Guid.NewGuid(), UserId = inv.TargetUserId!.Value };
+        // El destinatario debe ser quien está autenticado — usa el mismo UserId que
+        // configura _mockCurrentUser en el constructor.
+        var recipientId = _mockCurrentUser.Object.UserId;
+        var inv = new Invitation { InvitationId = id, Status = "Pending", ExpiresAt = DateTime.UtcNow.AddDays(1), TargetUserId = recipientId, TrainingSessionId = Guid.NewGuid() };
+        var trainee = new TraineeFirefighter { TraineeFirefighterId = Guid.NewGuid(), UserId = recipientId };
         _mockRepo.Setup(r => r.GetByIdAsync(id, It.IsAny<CancellationToken>())).ReturnsAsync(inv);
-        _mockTraineeRepo.Setup(t => t.GetByUserIdAsync(inv.TargetUserId.Value, It.IsAny<CancellationToken>())).ReturnsAsync(trainee);
+        _mockTraineeRepo.Setup(t => t.GetByUserIdAsync(recipientId, It.IsAny<CancellationToken>())).ReturnsAsync(trainee);
 
         var result = await _sut.AcceptAsync(id);
 
         inv.Status.Should().Be("Accepted");
         result.Should().NotBeNull();
         _mockParticipantRepo.Verify(p => p.AddAsync(It.IsAny<SessionParticipant>(), It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task AcceptAsync_NotTheRecipient_ThrowsForbiddenException()
+    {
+        var id = Guid.NewGuid();
+        var inv = new Invitation { InvitationId = id, Status = "Pending", ExpiresAt = DateTime.UtcNow.AddDays(1), TargetUserId = Guid.NewGuid() };
+        _mockRepo.Setup(r => r.GetByIdAsync(id, It.IsAny<CancellationToken>())).ReturnsAsync(inv);
+
+        var act = async () => await _sut.AcceptAsync(id);
+
+        await act.Should().ThrowAsync<ForbiddenException>();
+        _mockRepo.Verify(r => r.UpdateAsync(It.IsAny<Invitation>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task RejectAsync_NotTheRecipient_ThrowsForbiddenException()
+    {
+        var id = Guid.NewGuid();
+        var inv = new Invitation { InvitationId = id, Status = "Pending", TargetUserId = Guid.NewGuid() };
+        _mockRepo.Setup(r => r.GetByIdAsync(id, It.IsAny<CancellationToken>())).ReturnsAsync(inv);
+
+        var act = async () => await _sut.RejectAsync(id);
+
+        await act.Should().ThrowAsync<ForbiddenException>();
     }
 
     [Fact]

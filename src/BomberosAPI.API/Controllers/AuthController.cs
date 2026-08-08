@@ -11,11 +11,13 @@ namespace BomberosAPI.API.Controllers;
 public class AuthController : ControllerBase
 {
     private readonly AuthService _authService;
+    private readonly AuthSessionService _authSessionService;
     private readonly ICurrentUserService _currentUser;
 
-    public AuthController(AuthService authService, ICurrentUserService currentUser)
+    public AuthController(AuthService authService, AuthSessionService authSessionService, ICurrentUserService currentUser)
     {
         _authService = authService;
+        _authSessionService = authSessionService;
         _currentUser = currentUser;
     }
 
@@ -26,8 +28,20 @@ public class AuthController : ControllerBase
     [ProducesResponseType(typeof(ApiResponse<object?>), StatusCodes.Status401Unauthorized)]
     public async Task<IActionResult> Login([FromBody] LoginRequest request, CancellationToken ct)
     {
-        var result = await _authService.LoginAsync(request, ct);
+        var ip = HttpContext.Connection.RemoteIpAddress?.ToString();
+        var userAgent = Request.Headers.UserAgent.ToString();
+        var result = await _authService.LoginAsync(request, ct, ip, string.IsNullOrWhiteSpace(userAgent) ? null : userAgent);
         return Ok(ApiResponse<LoginResult>.Ok(result, "Login successful."));
+    }
+
+    /// <summary>Cierra las sesiones activas registradas del usuario autenticado.</summary>
+    [HttpPost("logout")]
+    [Authorize]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    public async Task<IActionResult> Logout(CancellationToken ct)
+    {
+        await _authSessionService.CloseAllForUserAsync(_currentUser.UserId, ct);
+        return NoContent();
     }
 
     /// <summary>Retorna la identidad del usuario autenticado desde el token JWT.</summary>
@@ -64,6 +78,18 @@ public class AuthController : ControllerBase
     public async Task<IActionResult> ResetPassword([FromBody] ResetPasswordRequest request, CancellationToken ct)
     {
         await _authService.ResetPasswordAsync(request, ct);
+        return Ok(ApiResponse<object?>.Ok(null, "Contraseña actualizada exitosamente."));
+    }
+
+    /// <summary>Cambia la contraseña del usuario autenticado (requiere la contraseña actual).</summary>
+    [HttpPost("change-password")]
+    [Authorize]
+    [ProducesResponseType(typeof(ApiResponse<object?>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiResponse<object?>), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ApiResponse<object?>), StatusCodes.Status401Unauthorized)]
+    public async Task<IActionResult> ChangePassword([FromBody] ChangePasswordRequest request, CancellationToken ct)
+    {
+        await _authService.ChangePasswordAsync(_currentUser.UserId, request, ct);
         return Ok(ApiResponse<object?>.Ok(null, "Contraseña actualizada exitosamente."));
     }
 }

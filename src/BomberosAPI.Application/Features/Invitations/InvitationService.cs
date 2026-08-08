@@ -88,6 +88,7 @@ public class InvitationService
         var invitation = await _repo.GetByIdAsync(id, ct)
             ?? throw new NotFoundException("Invitation", id);
 
+        EnsureIsRecipient(invitation);
         EnsurePending(invitation);
         EnsureNotExpired(invitation);
 
@@ -133,6 +134,7 @@ public class InvitationService
         var invitation = await _repo.GetByIdAsync(id, ct)
             ?? throw new NotFoundException("Invitation", id);
 
+        EnsureIsRecipient(invitation);
         EnsurePending(invitation);
 
         invitation.Status = "Rejected";
@@ -150,6 +152,16 @@ public class InvitationService
         invitation.Status = "Revoked";
         invitation.RespondedAt = DateTime.UtcNow;
         await _repo.UpdateAsync(invitation, ct);
+    }
+
+    // Sin este chequeo, cualquier cuenta autenticada podía aceptar o rechazar una
+    // invitación dirigida a otra persona — no corrompe a quién queda vinculada la
+    // participación (eso sigue viniendo de invitation.TargetUserId), pero le permitía a
+    // cualquiera decidir por alguien más si asiste o no a una sesión.
+    private void EnsureIsRecipient(Invitation invitation)
+    {
+        if (invitation.TargetUserId is not null && invitation.TargetUserId != _currentUser.UserId)
+            throw new ForbiddenException("This invitation is not addressed to you.");
     }
 
     private static void EnsurePending(Invitation invitation)

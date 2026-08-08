@@ -10,6 +10,11 @@ using Scalar.AspNetCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Permite instalar y correr esta API como Windows Service (ver deploy/install-service.ps1).
+// No-op cuando se ejecuta de cualquier otra forma (dotnet run, IIS, consola) — es seguro
+// dejarlo siempre activo, incluido en desarrollo local.
+builder.Host.UseWindowsService();
+
 // Database
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
@@ -33,14 +38,23 @@ builder.Services.AddJwtAuthentication(builder.Configuration);
 // ICurrentUserService — lee claims del JWT en cada request
 builder.Services.AddCurrentUser();
 
-// CORS — permite peticiones desde Expo Web y cualquier localhost en desarrollo
+// CORS — orígenes permitidos. Se leen de "Cors:AllowedOrigins" en el appsettings del
+// entorno activo (ver appsettings.Production.json) para no tener que recompilar cuando
+// cambie el dominio/IP del servidor; si esa sección no existe (como en Local/Development
+// hoy) se usa la lista de desarrollo de siempre.
+var configuredOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>();
+var corsOrigins = configuredOrigins is { Length: > 0 }
+    ? configuredOrigins
+    : [
+        "http://localhost:8081",
+        "http://localhost:19006",
+        "http://localhost:3000",
+        "http://100.89.25.34:8081",
+      ];
+
 builder.Services.AddCors(options =>
     options.AddDefaultPolicy(policy =>
-        policy.WithOrigins(
-                "http://localhost:8081",
-                "http://localhost:19006",
-                "http://localhost:3000",
-                "http://100.89.25.34:8081")
+        policy.WithOrigins(corsOrigins)
               .AllowAnyHeader()
               .AllowAnyMethod()));
 
@@ -56,11 +70,12 @@ if (app.Environment.IsDevelopment())
 
 app.UseGlobalExceptionMiddleware();
 
-app.UseSwagger();
-app.UseSwaggerUI(c => c.SwaggerEndpoint("/swagger/v1/swagger.json", "BomberosAPI v1"));
-
-if (app.Environment.IsDevelopment())
+// Swagger/OpenAPI/Scalar solo fuera de Production: no tiene sentido exponer el
+// esquema completo de la API (y una UI para probarla) en un servidor real.
+if (!app.Environment.IsProduction())
 {
+    app.UseSwagger();
+    app.UseSwaggerUI(c => c.SwaggerEndpoint("/swagger/v1/swagger.json", "BomberosAPI v1"));
     app.MapOpenApi();
     app.MapScalarApiReference();
 }

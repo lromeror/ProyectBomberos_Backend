@@ -89,6 +89,9 @@ public class VitalSignsMeasurementService
                     v.DiastolicPressure,
                     v.TemperatureC,
                     v.Spo2,
+                    v.PracticeRole,
+                    v.IsSmoker,
+                    v.ExposedToSmoke48h,
                     v.TakenAt);
             })
             .OrderBy(h => h.SessionDate)
@@ -122,6 +125,9 @@ public class VitalSignsMeasurementService
             DiastolicPressure = request.DiastolicPressure,
             TemperatureC = request.TemperatureC,
             Spo2 = request.Spo2,
+            PracticeRole = request.PracticeRole,
+            IsSmoker = request.IsSmoker,
+            ExposedToSmoke48h = request.ExposedToSmoke48h,
             TakenAt = DateTime.UtcNow
         };
 
@@ -138,5 +144,8 @@ public class VitalSignsMeasurementService
         v.DiastolicPressure,
         v.TemperatureC,
         v.Spo2,
+        v.PracticeRole,
+        v.IsSmoker,
+        v.ExposedToSmoke48h,
         v.TakenAt);
 }

@@ -1,4 +1,5 @@
 ﻿using BomberosAPI.API.Common.Responses;
+using BomberosAPI.Application.Common.Constants;
 using BomberosAPI.Application.Features.Invitations;
 using BomberosAPI.Application.Features.Participants;
 using Microsoft.AspNetCore.Authorization;
@@ -11,6 +12,9 @@ namespace BomberosAPI.API.Controllers;
 [Authorize]
 public class InvitationsController : ControllerBase
 {
+    // Igual que "manageInvitations" en el guards.js del frontend.
+    private const string ManageInvitationRoles = Roles.Admin + "," + Roles.SystemAdmin + "," + Roles.Capacitator + "," + Roles.FireChief;
+
     private readonly InvitationService _service;
 
     public InvitationsController(InvitationService service)
@@ -36,6 +40,7 @@ public class InvitationsController : ControllerBase
     }
 
     [HttpPost]
+    [Authorize(Roles = ManageInvitationRoles)]
     [ProducesResponseType(typeof(ApiResponse<CreateInvitationResponse>), StatusCodes.Status201Created)]
     [ProducesResponseType(typeof(ApiResponse<object?>), StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> Create([FromBody] CreateInvitationRequest request, CancellationToken ct)
@@ -66,6 +71,7 @@ public class InvitationsController : ControllerBase
     }
 
     [HttpPost("{id:guid}/revoke")]
+    [Authorize(Roles = ManageInvitationRoles)]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(typeof(ApiResponse<object?>), StatusCodes.Status404NotFound)]
     [ProducesResponseType(typeof(ApiResponse<object?>), StatusCodes.Status409Conflict)]

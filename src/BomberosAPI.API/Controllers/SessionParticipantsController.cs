@@ -1,4 +1,5 @@
 ﻿using BomberosAPI.API.Common.Responses;
+using BomberosAPI.Application.Common.Constants;
 using BomberosAPI.Application.Features.Participants;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -10,6 +11,8 @@ namespace BomberosAPI.API.Controllers;
 [Authorize]
 public class SessionParticipantsController : ControllerBase
 {
+    private const string ManageParticipantRoles = Roles.Admin + "," + Roles.SystemAdmin + "," + Roles.Capacitator + "," + Roles.FireChief;
+
     private readonly SessionParticipantService _service;
 
     public SessionParticipantsController(SessionParticipantService service)
@@ -35,6 +38,7 @@ public class SessionParticipantsController : ControllerBase
     }
 
     [HttpPost]
+    [Authorize(Roles = ManageParticipantRoles)]
     [ProducesResponseType(typeof(ApiResponse<SessionParticipantDto>), StatusCodes.Status201Created)]
     [ProducesResponseType(typeof(ApiResponse<object?>), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ApiResponse<object?>), StatusCodes.Status404NotFound)]
@@ -46,6 +50,7 @@ public class SessionParticipantsController : ControllerBase
     }
 
     [HttpPost("{id:guid}/check-in")]
+    [Authorize(Roles = ManageParticipantRoles)]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(typeof(ApiResponse<object?>), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> CheckIn(Guid id, CancellationToken ct)

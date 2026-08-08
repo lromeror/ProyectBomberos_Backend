@@ -1,4 +1,6 @@
 ﻿using BomberosAPI.API.Common.Responses;
+using BomberosAPI.Application.Common.Constants;
+using BomberosAPI.Application.Common.Interfaces;
 using BomberosAPI.Application.Features.TraineeFirefighters;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -11,10 +13,12 @@ namespace BomberosAPI.API.Controllers;
 public class TraineeFirefightersController : ControllerBase
 {
     private readonly TraineeFirefighterService _service;
+    private readonly ICurrentUserService _currentUser;
 
-    public TraineeFirefightersController(TraineeFirefighterService service)
+    public TraineeFirefightersController(TraineeFirefighterService service, ICurrentUserService currentUser)
     {
         _service = service;
+        _currentUser = currentUser;
     }
 
     [HttpGet]
@@ -35,6 +39,7 @@ public class TraineeFirefightersController : ControllerBase
     }
 
     [HttpPost]
+    [Authorize(Roles = Roles.FireChief + "," + Roles.Admin + "," + Roles.SystemAdmin)]
     [ProducesResponseType(typeof(ApiResponse<TraineeFirefighterDto>), StatusCodes.Status201Created)]
     [ProducesResponseType(typeof(ApiResponse<object?>), StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> Create([FromBody] CreateTraineeFirefighterRequest request, CancellationToken ct)
@@ -45,6 +50,7 @@ public class TraineeFirefightersController : ControllerBase
     }
 
     [HttpPut("{id:guid}")]
+    [Authorize(Roles = Roles.FireChief + "," + Roles.Admin + "," + Roles.SystemAdmin)]
     [ProducesResponseType(typeof(ApiResponse<TraineeFirefighterDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ApiResponse<object?>), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> Update(Guid id, [FromBody] UpdateTraineeFirefighterRequest request, CancellationToken ct)
@@ -54,11 +60,12 @@ public class TraineeFirefightersController : ControllerBase
     }
 
     [HttpPatch("{id:guid}/training-status")]
+    [Authorize(Roles = Roles.FireChief + "," + Roles.Admin + "," + Roles.SystemAdmin)]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(typeof(ApiResponse<object?>), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> SetTrainingStatus(Guid id, [FromBody] SetTrainingStatusRequest request, CancellationToken ct)
     {
-        await _service.SetTrainingStatusAsync(id, request.Status, ct);
+        await _service.SetTrainingStatusAsync(id, request.Status, _currentUser.UserId, ct);
         return NoContent();
     }
 }

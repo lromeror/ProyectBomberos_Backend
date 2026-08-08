@@ -1,4 +1,5 @@
 using BomberosAPI.API.Common.Responses;
+using BomberosAPI.Application.Common.Constants;
 using BomberosAPI.Application.Features.TrainingSessions;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -10,6 +11,10 @@ namespace BomberosAPI.API.Controllers;
 [Authorize]
 public class TrainingSessionsController : ControllerBase
 {
+    // Mismo conjunto que "createSession" en el guards.js del frontend: quienes pueden
+    // crear una sesión también pueden editarla, cancelarla o correr su ciclo de vida.
+    private const string ManageSessionRoles = Roles.Admin + "," + Roles.SystemAdmin + "," + Roles.Capacitator + "," + Roles.FireChief;
+
     private readonly TrainingSessionService _service;
 
     public TrainingSessionsController(TrainingSessionService service) => _service = service;
@@ -32,6 +37,7 @@ public class TrainingSessionsController : ControllerBase
     }
 
     [HttpPost]
+    [Authorize(Roles = ManageSessionRoles)]
     [ProducesResponseType(typeof(ApiResponse<TrainingSessionDto>), StatusCodes.Status201Created)]
     [ProducesResponseType(typeof(ApiResponse<object?>), StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> Create([FromBody] CreateTrainingSessionRequest request, CancellationToken ct)
@@ -42,6 +48,7 @@ public class TrainingSessionsController : ControllerBase
     }
 
     [HttpPut("{id:guid}")]
+    [Authorize(Roles = ManageSessionRoles)]
     [ProducesResponseType(typeof(ApiResponse<TrainingSessionDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ApiResponse<object?>), StatusCodes.Status404NotFound)]
     [ProducesResponseType(typeof(ApiResponse<object?>), StatusCodes.Status422UnprocessableEntity)]
@@ -52,6 +59,7 @@ public class TrainingSessionsController : ControllerBase
     }
 
     [HttpPatch("{id:guid}/status")]
+    [Authorize(Roles = ManageSessionRoles)]
     [ProducesResponseType(typeof(ApiResponse<TrainingSessionDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ApiResponse<object?>), StatusCodes.Status404NotFound)]
     [ProducesResponseType(typeof(ApiResponse<object?>), StatusCodes.Status422UnprocessableEntity)]
@@ -62,6 +70,7 @@ public class TrainingSessionsController : ControllerBase
     }
 
     [HttpPatch("{id:guid}/start")]
+    [Authorize(Roles = ManageSessionRoles)]
     [ProducesResponseType(typeof(ApiResponse<TrainingSessionDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ApiResponse<object?>), StatusCodes.Status404NotFound)]
     [ProducesResponseType(typeof(ApiResponse<object?>), StatusCodes.Status422UnprocessableEntity)]
@@ -72,6 +81,7 @@ public class TrainingSessionsController : ControllerBase
     }
 
     [HttpPatch("{id:guid}/finish")]
+    [Authorize(Roles = ManageSessionRoles)]
     [ProducesResponseType(typeof(ApiResponse<TrainingSessionDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ApiResponse<object?>), StatusCodes.Status404NotFound)]
     [ProducesResponseType(typeof(ApiResponse<object?>), StatusCodes.Status422UnprocessableEntity)]

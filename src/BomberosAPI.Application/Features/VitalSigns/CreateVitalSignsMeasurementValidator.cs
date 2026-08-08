@@ -29,5 +29,7 @@ public class CreateVitalSignsMeasurementValidator : AbstractValidator<CreateVita
         RuleFor(x => x.Spo2)
             .InclusiveBetween(50, 100).When(x => x.Spo2.HasValue)
             .WithMessage("Spo2 must be between 50 and 100 %.");
+
+        RuleFor(x => x.PracticeRole).MaximumLength(30);
     }
 }

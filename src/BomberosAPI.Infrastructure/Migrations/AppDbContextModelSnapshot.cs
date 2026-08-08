@@ -48,6 +48,15 @@ namespace BomberosAPI.Infrastructure.Migrations
                         .HasColumnType("datetime2")
                         .HasColumnName("occurred_at");
 
+                    b.Property<Guid?>("ResourceId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("resource_id");
+
+                    b.Property<string>("ResourceType")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)")
+                        .HasColumnName("resource_type");
+
                     b.Property<bool>("Success")
                         .HasColumnType("bit")
                         .HasColumnName("success");
@@ -143,6 +152,21 @@ namespace BomberosAPI.Infrastructure.Migrations
                         .HasColumnType("decimal(4,2)")
                         .HasColumnName("fat_percentage");
 
+                    b.Property<decimal?>("LactatePostMmol")
+                        .HasPrecision(4, 2)
+                        .HasColumnType("decimal(4,2)")
+                        .HasColumnName("lactate_post_mmol");
+
+                    b.Property<decimal?>("LactatePreMmol")
+                        .HasPrecision(4, 2)
+                        .HasColumnType("decimal(4,2)")
+                        .HasColumnName("lactate_pre_mmol");
+
+                    b.Property<decimal?>("MetabolicAgeYears")
+                        .HasPrecision(5, 2)
+                        .HasColumnType("decimal(5,2)")
+                        .HasColumnName("metabolic_age_years");
+
                     b.Property<decimal?>("MuscleMassKg")
                         .HasPrecision(5, 2)
                         .HasColumnType("decimal(5,2)")
@@ -155,6 +179,15 @@ namespace BomberosAPI.Infrastructure.Migrations
                     b.Property<Guid>("SessionParticipantId")
                         .HasColumnType("uniqueidentifier")
                         .HasColumnName("session_participant_id");
+
+                    b.Property<int?>("StroopErrors")
+                        .HasColumnType("int")
+                        .HasColumnName("stroop_errors");
+
+                    b.Property<decimal?>("StroopTimeSeconds")
+                        .HasPrecision(6, 2)
+                        .HasColumnType("decimal(6,2)")
+                        .HasColumnName("stroop_time_seconds");
 
                     b.Property<DateTime>("TakenAt")
                         .HasColumnType("datetime2")
@@ -419,6 +452,12 @@ namespace BomberosAPI.Infrastructure.Migrations
                         .HasColumnType("bit")
                         .HasColumnName("can_approve_discharges");
 
+                    b.Property<bool>("IsActive")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(true)
+                        .HasColumnName("is_active");
+
                     b.Property<string>("LicenseNumber")
                         .HasMaxLength(50)
                         .HasColumnType("nvarchar(50)")
@@ -439,6 +478,8 @@ namespace BomberosAPI.Infrastructure.Migrations
                         .HasColumnName("user_id");
 
                     b.HasKey("HealthPersonnelId");
+
+                    b.HasIndex("UserId");
 
                     b.ToTable("HealthPersonnel", (string)null);
                 });
@@ -827,6 +868,8 @@ namespace BomberosAPI.Infrastructure.Migrations
 
                     b.HasKey("TraineeFirefighterId");
 
+                    b.HasIndex("UserId");
+
                     b.ToTable("TraineeFirefighter", (string)null);
                 });
 
@@ -1161,10 +1204,23 @@ namespace BomberosAPI.Infrastructure.Migrations
                         .HasColumnType("decimal(5,2)")
                         .HasColumnName("diastolic_pressure");
 
+                    b.Property<bool?>("ExposedToSmoke48h")
+                        .HasColumnType("bit")
+                        .HasColumnName("exposed_to_smoke_48h");
+
                     b.Property<decimal?>("HeartRate")
                         .HasPrecision(5, 2)
                         .HasColumnType("decimal(5,2)")
                         .HasColumnName("heart_rate");
+
+                    b.Property<bool?>("IsSmoker")
+                        .HasColumnType("bit")
+                        .HasColumnName("is_smoker");
+
+                    b.Property<string>("PracticeRole")
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)")
+                        .HasColumnName("practice_role");
 
                     b.Property<Guid>("RegisteredByHealthPersonnelId")
                         .HasColumnType("uniqueidentifier")
@@ -1196,6 +1252,28 @@ namespace BomberosAPI.Infrastructure.Migrations
                     b.HasKey("VitalSignsMeasurementId");
 
                     b.ToTable("VitalSignsMeasurement", (string)null);
+                });
+
+            modelBuilder.Entity("BomberosAPI.Domain.Entities.HealthPersonnel", b =>
+                {
+                    b.HasOne("BomberosAPI.Domain.Entities.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("BomberosAPI.Domain.Entities.TraineeFirefighter", b =>
+                {
+                    b.HasOne("BomberosAPI.Domain.Entities.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("User");
                 });
 #pragma warning restore 612, 618
         }

@@ -83,7 +83,7 @@ public class VitalSignsMeasurementServiceTests
     {
         var pId = Guid.NewGuid();
         var hpId = Guid.NewGuid();
-        var request = new CreateVitalSignsMeasurementRequest(pId, hpId, 80, 120, 80, 36.5m, 98);
+        var request = new CreateVitalSignsMeasurementRequest(pId, hpId, 80, 120, 80, 36.5m, 98, "Portero", false, true);
 
         _mockParticipantRepo.Setup(r => r.GetByIdAsync(pId, It.IsAny<CancellationToken>())).ReturnsAsync(new SessionParticipant());
         _mockHpRepo.Setup(r => r.GetByIdAsync(hpId, It.IsAny<CancellationToken>())).ReturnsAsync(new BomberosAPI.Domain.Entities.HealthPersonnel());
@@ -92,13 +92,16 @@ public class VitalSignsMeasurementServiceTests
 
         result.Should().NotBeNull();
         result.HeartRate.Should().Be(80);
+        result.PracticeRole.Should().Be("Portero");
+        result.IsSmoker.Should().Be(false);
+        result.ExposedToSmoke48h.Should().Be(true);
         _mockRepo.Verify(r => r.AddAsync(It.IsAny<VitalSignsMeasurement>(), It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]
     public async Task CreateAsync_ParticipantNotFound_ThrowsNotFoundException()
     {
-        var request = new CreateVitalSignsMeasurementRequest(Guid.NewGuid(), Guid.NewGuid(), 80, 120, 80, 36.5m, 98);
+        var request = new CreateVitalSignsMeasurementRequest(Guid.NewGuid(), Guid.NewGuid(), 80, 120, 80, 36.5m, 98, "Portero", false, true);
         _mockParticipantRepo.Setup(r => r.GetByIdAsync(request.SessionParticipantId, It.IsAny<CancellationToken>())).ReturnsAsync((SessionParticipant)null!);
 
         var act = async () => await _sut.CreateAsync(request);
@@ -108,7 +111,7 @@ public class VitalSignsMeasurementServiceTests
     [Fact]
     public async Task CreateAsync_HealthPersonnelNotFound_ThrowsNotFoundException()
     {
-        var request = new CreateVitalSignsMeasurementRequest(Guid.NewGuid(), Guid.NewGuid(), 80, 120, 80, 36.5m, 98);
+        var request = new CreateVitalSignsMeasurementRequest(Guid.NewGuid(), Guid.NewGuid(), 80, 120, 80, 36.5m, 98, "Portero", false, true);
         _mockParticipantRepo.Setup(r => r.GetByIdAsync(request.SessionParticipantId, It.IsAny<CancellationToken>())).ReturnsAsync(new SessionParticipant());
         _mockHpRepo.Setup(r => r.GetByIdAsync(request.RegisteredByHealthPersonnelId, It.IsAny<CancellationToken>())).ReturnsAsync((BomberosAPI.Domain.Entities.HealthPersonnel)null!);
 
@@ -119,7 +122,7 @@ public class VitalSignsMeasurementServiceTests
     [Fact]
     public async Task CreateAsync_InvalidRequest_ThrowsValidationException()
     {
-        var request = new CreateVitalSignsMeasurementRequest(Guid.NewGuid(), Guid.NewGuid(), 80, 120, 80, 36.5m, 98);
+        var request = new CreateVitalSignsMeasurementRequest(Guid.NewGuid(), Guid.NewGuid(), 80, 120, 80, 36.5m, 98, "Portero", false, true);
         var validationResult = new ValidationResult(new[] { new ValidationFailure("HeartRate", "Invalid") });
         _mockValidator.Setup(v => v.ValidateAsync(request, It.IsAny<CancellationToken>())).ReturnsAsync(validationResult);
 

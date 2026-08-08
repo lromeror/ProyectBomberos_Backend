@@ -10,5 +10,8 @@ public class VitalSignsMeasurement
     public decimal? DiastolicPressure { get; set; }
     public decimal? TemperatureC { get; set; }
     public decimal? Spo2 { get; set; }
+    public string? PracticeRole { get; set; }
+    public bool? IsSmoker { get; set; }
+    public bool? ExposedToSmoke48h { get; set; }
     public DateTime TakenAt { get; set; }
 }

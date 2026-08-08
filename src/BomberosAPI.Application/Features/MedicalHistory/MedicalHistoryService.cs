@@ -1,4 +1,5 @@
 ﻿using BomberosAPI.Application.Common.Exceptions;
+using BomberosAPI.Application.Features.Audit;
 using BomberosAPI.Domain.Repositories;
 using FluentValidation;
 using MedicalHistoryEntity = BomberosAPI.Domain.Entities.MedicalHistory;
@@ -12,17 +13,20 @@ public class MedicalHistoryService
     private readonly ITraineeFirefighterRepository _traineeRepo;
     private readonly IHealthPersonnelRepository _hpRepo;
     private readonly IValidator<CreateMedicalHistoryRequest> _createValidator;
+    private readonly ChangeAuditService _changeAudit;
 
     public MedicalHistoryService(
         IMedicalHistoryRepository repo,
         ITraineeFirefighterRepository traineeRepo,
         IHealthPersonnelRepository hpRepo,
-        IValidator<CreateMedicalHistoryRequest> createValidator)
+        IValidator<CreateMedicalHistoryRequest> createValidator,
+        ChangeAuditService changeAudit)
     {
         _repo = repo;
         _traineeRepo = traineeRepo;
         _hpRepo = hpRepo;
         _createValidator = createValidator;
+        _changeAudit = changeAudit;
     }
 
     public async Task<IReadOnlyList<MedicalHistoryDto>> GetAllAsync(CancellationToken ct = default)
@@ -45,7 +49,7 @@ public class MedicalHistoryService
         return ToDto(mh);
     }
 
-    public async Task<MedicalHistoryDto> CreateAsync(CreateMedicalHistoryRequest request, CancellationToken ct = default)
+    public async Task<MedicalHistoryDto> CreateAsync(CreateMedicalHistoryRequest request, Guid actingUserId, CancellationToken ct = default)
     {
         var validation = await _createValidator.ValidateAsync(request, ct);
         if (!validation.IsValid)
@@ -78,13 +82,19 @@ public class MedicalHistoryService
         };
 
         await _repo.AddAsync(mh, ct);
+
+        await _changeAudit.LogAsync(actingUserId, "MedicalHistory", mh.MedicalHistoryId, "Create", null,
+            SnapshotOf(mh), ct);
+
         return ToDto(mh);
     }
 
-    public async Task<MedicalHistoryDto> UpdateAsync(Guid id, UpdateMedicalHistoryRequest request, CancellationToken ct = default)
+    public async Task<MedicalHistoryDto> UpdateAsync(Guid id, UpdateMedicalHistoryRequest request, Guid actingUserId, CancellationToken ct = default)
     {
         var mh = await _repo.GetByIdAsync(id, ct)
             ?? throw new NotFoundException("MedicalHistory", id);
+
+        var previous = SnapshotOf(mh);
 
         mh.Allergies = request.Allergies;
         mh.PreexistingConditions = request.PreexistingConditions;
@@ -93,8 +103,19 @@ public class MedicalHistoryService
         mh.UpdatedAt = DateTime.UtcNow;
 
         await _repo.UpdateAsync(mh, ct);
+
+        await _changeAudit.LogAsync(actingUserId, "MedicalHistory", id, "Update", previous, SnapshotOf(mh), ct);
+
         return ToDto(mh);
     }
+
+    private static Dictionary<string, object?> SnapshotOf(MedicalHistoryEntity mh) => new()
+    {
+        ["allergies"] = mh.Allergies,
+        ["preexistingConditions"] = mh.PreexistingConditions,
+        ["currentMedication"] = mh.CurrentMedication,
+        ["generalObservations"] = mh.GeneralObservations,
+    };
 
     private static MedicalHistoryDto ToDto(MedicalHistoryEntity m) => new(
         m.MedicalHistoryId,

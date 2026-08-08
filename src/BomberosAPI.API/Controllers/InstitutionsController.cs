@@ -1,4 +1,5 @@
 using BomberosAPI.API.Common.Responses;
+using BomberosAPI.Application.Common.Constants;
 using BomberosAPI.Application.Features.Institutions;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -33,6 +34,7 @@ public class InstitutionsController : ControllerBase
     }
 
     [HttpPost]
+    [Authorize(Roles = Roles.Admin + "," + Roles.SystemAdmin)]
     [ProducesResponseType(typeof(ApiResponse<InstitutionDto>), StatusCodes.Status201Created)]
     [ProducesResponseType(typeof(ApiResponse<object?>), StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> Create([FromBody] CreateInstitutionRequest request, CancellationToken ct)
@@ -43,6 +45,7 @@ public class InstitutionsController : ControllerBase
     }
 
     [HttpPut("{id:guid}")]
+    [Authorize(Roles = Roles.Admin + "," + Roles.SystemAdmin)]
     [ProducesResponseType(typeof(ApiResponse<InstitutionDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ApiResponse<object?>), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> Update(Guid id, [FromBody] UpdateInstitutionRequest request, CancellationToken ct)

@@ -1,4 +1,5 @@
 ﻿using BomberosAPI.API.Common.Responses;
+using BomberosAPI.Application.Common.Constants;
 using BomberosAPI.Application.Features.EnvironmentalData;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -43,6 +44,7 @@ public class EnvironmentalDataController : ControllerBase
     }
 
     [HttpPost]
+    [Authorize(Roles = Roles.Medical + "," + Roles.Admin + "," + Roles.SystemAdmin + "," + Roles.Capacitator + "," + Roles.FireChief)]
     [ProducesResponseType(typeof(ApiResponse<EnvironmentalDataDto>), StatusCodes.Status201Created)]
     [ProducesResponseType(typeof(ApiResponse<object?>), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ApiResponse<object?>), StatusCodes.Status404NotFound)]
