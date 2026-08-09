@@ -174,3 +174,5 @@ appsettings.Development.json
 
 # Test files
 generate_tests.py
+# Reporte de cobertura generado (dotnet test --collect coverage + reportgenerator)
+coveragereport/
