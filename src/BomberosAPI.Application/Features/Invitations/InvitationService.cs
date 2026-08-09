@@ -66,7 +66,7 @@ public class InvitationService
             InvitationId = Guid.NewGuid(),
             SenderUserId = _currentUser.IsAuthenticated
     ? _currentUser.UserId
-    : throw new UnauthorizedAccessException("No authenticated user."),
+    : throw new UnauthorizedException("No authenticated user."),
             TargetUserId = request.TargetUserId,
             TrainingSessionId = request.TrainingSessionId,
             TargetRoleId = request.TargetRoleId,

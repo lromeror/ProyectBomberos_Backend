@@ -11,6 +11,11 @@ namespace BomberosAPI.API.Controllers;
 [Authorize]
 public class BioimpedanceMeasurementsController : ControllerBase
 {
+    // Ver el mismo razonamiento en VitalSignsMeasurementsController.
+    private const string StaffRoles = Roles.Medical + "," + Roles.Admin + "," + Roles.SystemAdmin
+        + "," + Roles.Capacitator + "," + Roles.FireChief;
+    private const string StaffOrSelfRoles = StaffRoles + "," + Roles.FirefighterTrainee;
+
     private readonly BioimpedanceMeasurementService _service;
 
     public BioimpedanceMeasurementsController(BioimpedanceMeasurementService service)
@@ -19,6 +24,7 @@ public class BioimpedanceMeasurementsController : ControllerBase
     }
 
     [HttpGet]
+    [Authorize(Roles = StaffRoles)]
     [ProducesResponseType(typeof(ApiResponse<IReadOnlyList<BioimpedanceMeasurementDto>>), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetAll(CancellationToken ct)
     {
@@ -27,6 +33,7 @@ public class BioimpedanceMeasurementsController : ControllerBase
     }
 
     [HttpGet("{id:guid}")]
+    [Authorize(Roles = StaffRoles)]
     [ProducesResponseType(typeof(ApiResponse<BioimpedanceMeasurementDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ApiResponse<object?>), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetById(Guid id, CancellationToken ct)
@@ -36,6 +43,7 @@ public class BioimpedanceMeasurementsController : ControllerBase
     }
 
     [HttpGet("by-participant/{participantId:guid}")]
+    [Authorize(Roles = StaffOrSelfRoles)]
     [ProducesResponseType(typeof(ApiResponse<IReadOnlyList<BioimpedanceMeasurementDto>>), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetByParticipant(Guid participantId, CancellationToken ct)
     {
@@ -44,6 +52,7 @@ public class BioimpedanceMeasurementsController : ControllerBase
     }
 
     [HttpGet("by-trainee/{traineeFirefighterId:guid}")]
+    [Authorize(Roles = StaffOrSelfRoles)]
     [ProducesResponseType(typeof(ApiResponse<IReadOnlyList<BioimpedanceMeasurementDto>>), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetByTrainee(Guid traineeFirefighterId, CancellationToken ct)
     {

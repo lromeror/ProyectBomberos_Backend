@@ -17,10 +17,13 @@ public class BioimpedanceMeasurementRepository : IBioimpedanceMeasurementReposit
     public Task<BioimpedanceMeasurement?> GetByIdAsync(Guid id, CancellationToken ct = default) =>
         _db.BioimpedanceMeasurements.FirstOrDefaultAsync(b => b.BioimpedanceMeasurementId == id, ct);
 
+    // Ver el mismo razonamiento en VitalSignsMeasurementRepository: sin ORDER BY el
+    // orden de retorno no está garantizado.
     public async Task<IEnumerable<BioimpedanceMeasurement>> GetByParticipantAsync(Guid sessionParticipantId, CancellationToken ct = default) =>
         await _db.BioimpedanceMeasurements
             .AsNoTracking()
             .Where(b => b.SessionParticipantId == sessionParticipantId)
+            .OrderBy(b => b.TakenAt)
             .ToListAsync(ct);
 
     public async Task<IEnumerable<BioimpedanceMeasurement>> GetByTraineeAsync(Guid traineeFirefighterId, CancellationToken ct = default) =>
@@ -29,6 +32,7 @@ public class BioimpedanceMeasurementRepository : IBioimpedanceMeasurementReposit
                where sp.TraineeFirefighterId == traineeFirefighterId
                select b)
             .AsNoTracking()
+            .OrderBy(b => b.TakenAt)
             .ToListAsync(ct);
 
     public async Task AddAsync(BioimpedanceMeasurement measurement, CancellationToken ct = default)

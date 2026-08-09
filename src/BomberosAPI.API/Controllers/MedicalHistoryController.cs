@@ -21,7 +21,13 @@ public class MedicalHistoryController : ControllerBase
         _currentUser = currentUser;
     }
 
+    // Lectura restringida al mismo personal que puede escribir (Medical/Admin/SystemAdmin) —
+    // antes cualquier cuenta autenticada, incluido un aspirante, podía leer el historial
+    // médico completo de cualquier otro aspirante (alergias, medicación, condiciones
+    // preexistentes). Ningún flujo del frontend actual necesita un rol distinto para
+    // estas rutas (MedicalHistoryScreen ya está gateado por el mismo permiso).
     [HttpGet]
+    [Authorize(Roles = Roles.Medical + "," + Roles.Admin + "," + Roles.SystemAdmin)]
     [ProducesResponseType(typeof(ApiResponse<IReadOnlyList<MedicalHistoryDto>>), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetAll(CancellationToken ct)
     {
@@ -30,6 +36,7 @@ public class MedicalHistoryController : ControllerBase
     }
 
     [HttpGet("{id:guid}")]
+    [Authorize(Roles = Roles.Medical + "," + Roles.Admin + "," + Roles.SystemAdmin)]
     [ProducesResponseType(typeof(ApiResponse<MedicalHistoryDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ApiResponse<object?>), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetById(Guid id, CancellationToken ct)
@@ -39,6 +46,7 @@ public class MedicalHistoryController : ControllerBase
     }
 
     [HttpGet("by-trainee/{traineeId:guid}")]
+    [Authorize(Roles = Roles.Medical + "," + Roles.Admin + "," + Roles.SystemAdmin)]
     [ProducesResponseType(typeof(ApiResponse<MedicalHistoryDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ApiResponse<object?>), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetByTrainee(Guid traineeId, CancellationToken ct)

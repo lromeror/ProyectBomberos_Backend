@@ -1,5 +1,4 @@
 ﻿using BomberosAPI.Domain.Entities;
-using BomberosAPI.Domain.Enums;
 
 namespace BomberosAPI.Domain.Repositories;
 
@@ -8,12 +7,8 @@ namespace BomberosAPI.Domain.Repositories;
 /// </summary>
 public interface ITrainingSessionRepository : IRepository<TrainingSession>
 {
-
     /// Lists the sessions of a given institution.
     Task<IEnumerable<TrainingSession>> GetByInstitutionAsync(Guid institutionId, CancellationToken cancellationToken = default);
-
-    /// Lists the sessions filtered by their current status.
-    Task<IEnumerable<TrainingSession>> GetByStatusAsync(SessionStatus status, CancellationToken cancellationToken = default);
 
     /// Finds a session by its unique session code.
     Task<TrainingSession?> GetBySessionCodeAsync(string sessionCode, CancellationToken cancellationToken = default);

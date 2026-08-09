@@ -94,14 +94,18 @@ public class InvitationServiceTests
     }
 
     [Fact]
-    public async Task CreateAsync_UnauthenticatedUser_ThrowsUnauthorizedAccessException()
+    public async Task CreateAsync_UnauthenticatedUser_ThrowsUnauthorizedException()
     {
         var request = new CreateInvitationRequest(Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), "test@test.com", DateTime.UtcNow.AddDays(1));
         _mockCurrentUser.SetupGet(c => c.IsAuthenticated).Returns(false);
 
         var act = async () => await _sut.CreateAsync(request);
 
-        await act.Should().ThrowAsync<UnauthorizedAccessException>();
+        // Antes lanzaba System.UnauthorizedAccessException, que el middleware global no
+        // reconoce como AppException y caía al handler genérico (500 en vez de 401) —
+        // ver AUDIT_REPORT.md. Este código es defensivamente inalcanzable en producción
+        // (el controller ya exige [Authorize]), pero el tipo debe seguir siendo correcto.
+        await act.Should().ThrowAsync<BomberosAPI.Application.Common.Exceptions.UnauthorizedException>();
     }
 
     [Fact]

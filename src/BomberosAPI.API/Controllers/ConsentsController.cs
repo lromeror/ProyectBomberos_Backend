@@ -37,7 +37,7 @@ public class ConsentsController : ControllerBase
     public async Task<IActionResult> CreateDocument([FromBody] CreateConsentDocumentRequest request, CancellationToken ct)
     {
         var document = await _service.CreateDocumentAsync(request, ct);
-        return Ok(ApiResponse<ConsentDocumentDto>.Created(document));
+        return CreatedAtAction(nameof(GetActiveDocuments), null, ApiResponse<ConsentDocumentDto>.Created(document));
     }
 
     /// <summary>Consentimientos otorgados/revocados por el usuario autenticado.</summary>

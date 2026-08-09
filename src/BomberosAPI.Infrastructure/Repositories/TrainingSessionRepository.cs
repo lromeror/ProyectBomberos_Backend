@@ -1,5 +1,4 @@
 using BomberosAPI.Domain.Entities;
-using BomberosAPI.Domain.Enums;
 using BomberosAPI.Domain.Repositories;
 using BomberosAPI.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
@@ -20,9 +19,6 @@ public class TrainingSessionRepository : ITrainingSessionRepository
 
     public async Task<IEnumerable<TrainingSession>> GetByInstitutionAsync(Guid institutionId, CancellationToken cancellationToken = default) =>
         await _db.TrainingSessions.AsNoTracking().Where(s => s.InstitutionId == institutionId).ToListAsync(cancellationToken);
-
-    public async Task<IEnumerable<TrainingSession>> GetByStatusAsync(SessionStatus status, CancellationToken cancellationToken = default) =>
-        await _db.TrainingSessions.AsNoTracking().Where(s => s.Status == status.ToString()).ToListAsync(cancellationToken);
 
     public Task<TrainingSession?> GetBySessionCodeAsync(string sessionCode, CancellationToken cancellationToken = default) =>
         _db.TrainingSessions.AsNoTracking().FirstOrDefaultAsync(s => s.SessionCode == sessionCode, cancellationToken);

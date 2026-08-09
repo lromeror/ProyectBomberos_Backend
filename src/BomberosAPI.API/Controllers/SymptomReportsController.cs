@@ -11,6 +11,12 @@ namespace BomberosAPI.API.Controllers;
 [Authorize]
 public class SymptomReportsController : ControllerBase
 {
+    // Ver el mismo razonamiento en VitalSignsMeasurementsController: el aspirante solo
+    // puede leer lo suyo (by-participant/by-trainee), nunca GetAll/GetById sin filtro.
+    private const string StaffRoles = Roles.Medical + "," + Roles.Admin + "," + Roles.SystemAdmin
+        + "," + Roles.Capacitator + "," + Roles.FireChief;
+    private const string StaffOrSelfRoles = StaffRoles + "," + Roles.FirefighterTrainee;
+
     private readonly SymptomReportService _service;
 
     public SymptomReportsController(SymptomReportService service)
@@ -19,6 +25,7 @@ public class SymptomReportsController : ControllerBase
     }
 
     [HttpGet]
+    [Authorize(Roles = StaffRoles)]
     [ProducesResponseType(typeof(ApiResponse<IReadOnlyList<SymptomReportDto>>), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetAll(CancellationToken ct)
     {
@@ -27,6 +34,7 @@ public class SymptomReportsController : ControllerBase
     }
 
     [HttpGet("{id:guid}")]
+    [Authorize(Roles = StaffRoles)]
     [ProducesResponseType(typeof(ApiResponse<SymptomReportDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ApiResponse<object?>), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetById(Guid id, CancellationToken ct)
@@ -36,6 +44,7 @@ public class SymptomReportsController : ControllerBase
     }
 
     [HttpGet("by-participant/{participantId:guid}")]
+    [Authorize(Roles = StaffOrSelfRoles)]
     [ProducesResponseType(typeof(ApiResponse<IReadOnlyList<SymptomReportDto>>), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetByParticipant(Guid participantId, CancellationToken ct)
     {
@@ -44,6 +53,7 @@ public class SymptomReportsController : ControllerBase
     }
 
     [HttpGet("by-trainee/{traineeFirefighterId:guid}")]
+    [Authorize(Roles = StaffOrSelfRoles)]
     [ProducesResponseType(typeof(ApiResponse<IReadOnlyList<SymptomReportDto>>), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetByTrainee(Guid traineeFirefighterId, CancellationToken ct)
     {

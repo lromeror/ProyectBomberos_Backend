@@ -11,6 +11,14 @@ namespace BomberosAPI.API.Controllers;
 [Authorize]
 public class VitalSignsMeasurementsController : ControllerBase
 {
+    // El aspirante solo puede leer lo suyo (rutas by-participant/by-trainee, que el
+    // frontend siempre llama con su propio id) — nunca GetAll/GetById, que no filtran
+    // por dueño. El resto de roles son el mismo personal que ya podía crear mediciones,
+    // más Capacitator/FireChief, que las ven agregadas en ResultadosGeneralesView.
+    private const string StaffRoles = Roles.Medical + "," + Roles.Admin + "," + Roles.SystemAdmin
+        + "," + Roles.Capacitator + "," + Roles.FireChief;
+    private const string StaffOrSelfRoles = StaffRoles + "," + Roles.FirefighterTrainee;
+
     private readonly VitalSignsMeasurementService _service;
 
     public VitalSignsMeasurementsController(VitalSignsMeasurementService service)
@@ -19,6 +27,7 @@ public class VitalSignsMeasurementsController : ControllerBase
     }
 
     [HttpGet]
+    [Authorize(Roles = StaffRoles)]
     [ProducesResponseType(typeof(ApiResponse<IReadOnlyList<VitalSignsMeasurementDto>>), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetAll(CancellationToken ct)
     {
@@ -27,6 +36,7 @@ public class VitalSignsMeasurementsController : ControllerBase
     }
 
     [HttpGet("{id:guid}")]
+    [Authorize(Roles = StaffRoles)]
     [ProducesResponseType(typeof(ApiResponse<VitalSignsMeasurementDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ApiResponse<object?>), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetById(Guid id, CancellationToken ct)
@@ -36,6 +46,7 @@ public class VitalSignsMeasurementsController : ControllerBase
     }
 
     [HttpGet("by-participant/{participantId:guid}")]
+    [Authorize(Roles = StaffOrSelfRoles)]
     [ProducesResponseType(typeof(ApiResponse<IReadOnlyList<VitalSignsMeasurementDto>>), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetByParticipant(Guid participantId, CancellationToken ct)
     {
@@ -44,6 +55,7 @@ public class VitalSignsMeasurementsController : ControllerBase
     }
 
     [HttpGet("by-trainee/{traineeFirefighterId:guid}")]
+    [Authorize(Roles = StaffOrSelfRoles)]
     [ProducesResponseType(typeof(ApiResponse<IReadOnlyList<VitalSignsHistoryDto>>), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetByTrainee(Guid traineeFirefighterId, CancellationToken ct)
     {

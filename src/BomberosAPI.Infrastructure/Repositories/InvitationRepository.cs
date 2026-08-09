@@ -1,5 +1,4 @@
 ﻿using BomberosAPI.Domain.Entities;
-using BomberosAPI.Domain.Enums;
 using BomberosAPI.Domain.Repositories;
 using BomberosAPI.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
@@ -17,12 +16,6 @@ public class InvitationRepository : IInvitationRepository
 
     public Task<Invitation?> GetByIdAsync(Guid id, CancellationToken ct = default) =>
         _db.Invitations.FirstOrDefaultAsync(i => i.InvitationId == id, ct);
-
-    public async Task<IEnumerable<Invitation>> GetByStatusAsync(InvitationStatus status, CancellationToken ct = default) =>
-        await _db.Invitations
-            .AsNoTracking()
-            .Where(i => i.Status == status.ToString())
-            .ToListAsync(ct);
 
     public Task<Invitation?> GetByTokenHashAsync(string tokenHash, CancellationToken ct = default) =>
         _db.Invitations.FirstOrDefaultAsync(i => i.InvitationTokenHash == tokenHash, ct);

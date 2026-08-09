@@ -14,7 +14,9 @@ public class EnvironmentalDataConfiguration : IEntityTypeConfiguration<Environme
         builder.Property(e => e.TrainingSessionId).HasColumnName("training_session_id");
         builder.Property(e => e.RegisteredByUserId).HasColumnName("registered_by_user_id");
         builder.Property(e => e.TemperatureC).HasColumnName("temperature_c").HasPrecision(4, 2);
-        builder.Property(e => e.HumidityPct).HasColumnName("humidity_pct").HasPrecision(4, 2);
+        // decimal(4,2) solo llega a 99.99: 100% de humedad relativa (lluvia/ambiente
+        // saturado, un valor real) tiraba un overflow de SQL Server al guardar.
+        builder.Property(e => e.HumidityPct).HasColumnName("humidity_pct").HasPrecision(5, 2);
         builder.Property(e => e.CoPpm).HasColumnName("co_ppm").HasPrecision(7, 2);
         builder.Property(e => e.HeatStressIndex).HasColumnName("heat_stress_index").HasPrecision(5, 2);
         builder.Property(e => e.MeasuredAt).HasColumnName("measured_at");

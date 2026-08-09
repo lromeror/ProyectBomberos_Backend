@@ -17,10 +17,13 @@ public class SymptomReportRepository : ISymptomReportRepository
     public Task<SymptomReport?> GetByIdAsync(Guid id, CancellationToken ct = default) =>
         _db.SymptomReports.FirstOrDefaultAsync(s => s.SymptomReportId == id, ct);
 
+    // Ver el mismo razonamiento en VitalSignsMeasurementRepository: sin ORDER BY el
+    // orden de retorno no está garantizado.
     public async Task<IEnumerable<SymptomReport>> GetByParticipantAsync(Guid sessionParticipantId, CancellationToken ct = default) =>
         await _db.SymptomReports
             .AsNoTracking()
             .Where(s => s.SessionParticipantId == sessionParticipantId)
+            .OrderBy(s => s.ReportedAt)
             .ToListAsync(ct);
 
     public async Task<IEnumerable<SymptomReport>> GetByTraineeAsync(Guid traineeFirefighterId, CancellationToken ct = default) =>
@@ -29,6 +32,7 @@ public class SymptomReportRepository : ISymptomReportRepository
                where sp.TraineeFirefighterId == traineeFirefighterId
                select s)
             .AsNoTracking()
+            .OrderBy(s => s.ReportedAt)
             .ToListAsync(ct);
 
     public async Task AddAsync(SymptomReport report, CancellationToken ct = default)

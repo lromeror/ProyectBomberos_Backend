@@ -2,16 +2,17 @@
 namespace BomberosAPI.Domain.Enums;
 
 /// <summary>
-/// Estado de atencion de una alerta critica.
-/// status of a critical alert. 
-/// Defines the various states that a critical alert can be in, 
-/// such as Open, Acknowledged, InProgress, Resolved, and Dismissed.
+/// Estado de atención de una alerta crítica.
+///
+/// `CriticalAlert.Status` se persiste como string sin conversión a este enum (ver
+/// CriticalAlertConfiguration) — este tipo documenta el vocabulario real que
+/// CriticalAlertService.cs escribe/lee (Open al crear, Attended al atender), no un
+/// flujo de estados más rico que nunca se implementó. Antes declaraba
+/// Open/Acknowledged/InProgress/Resolved/Dismissed, un vocabulario que no coincidía
+/// con "Attended", el valor que el código realmente usa.
 /// </summary>
 public enum AlertStatus
 {
     Open,
-    Acknowledged,
-    InProgress,
-    Resolved,
-    Dismissed
+    Attended
 }

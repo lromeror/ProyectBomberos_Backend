@@ -2,6 +2,7 @@ using BomberosAPI.Application.Common.Exceptions;
 using BomberosAPI.Domain.Repositories;
 using FluentValidation;
 using SymptomReportEntity = BomberosAPI.Domain.Entities.SymptomReport;
+using CriticalAlertEntity = BomberosAPI.Domain.Entities.CriticalAlert;
 using AppValidationException = BomberosAPI.Application.Common.Exceptions.ValidationException;
 
 namespace BomberosAPI.Application.Features.SymptomReports;
@@ -11,17 +12,20 @@ public class SymptomReportService
     private readonly ISymptomReportRepository _repo;
     private readonly ISessionParticipantRepository _participantRepo;
     private readonly IUserRepository _userRepo;
+    private readonly ICriticalAlertRepository _criticalAlertRepo;
     private readonly IValidator<CreateSymptomReportRequest> _createValidator;
 
     public SymptomReportService(
         ISymptomReportRepository repo,
         ISessionParticipantRepository participantRepo,
         IUserRepository userRepo,
+        ICriticalAlertRepository criticalAlertRepo,
         IValidator<CreateSymptomReportRequest> createValidator)
     {
         _repo = repo;
         _participantRepo = participantRepo;
         _userRepo = userRepo;
+        _criticalAlertRepo = criticalAlertRepo;
         _createValidator = createValidator;
     }
 
@@ -79,6 +83,33 @@ public class SymptomReportService
         };
 
         await _repo.AddAsync(report, ct);
+
+        // El pipeline de alertas críticas existía en el backend (CriticalAlertsController)
+        // pero nada lo disparaba nunca: `RequiresAlert` llegaba siempre en `false` desde el
+        // frontend y ningún flujo generaba una fila en CriticalAlert. Un síntoma reportado
+        // como "requiere alerta" ahora sí queda registrado como alerta abierta, visible vía
+        // GET /critical-alerts para el personal médico/capacitador/jefe de bomberos.
+        if (report.RequiresAlert)
+        {
+            var alert = new CriticalAlertEntity
+            {
+                CriticalAlertId = Guid.NewGuid(),
+                SessionParticipantId = report.SessionParticipantId,
+                SymptomReportId = report.SymptomReportId,
+                AlertType = "SymptomReport",
+                // CriticalAlert usa su propio vocabulario de severidad (Low/Medium/High/
+                // Critical, ver CriticalAlertService.ValidSeverities) distinto al de
+                // SymptomSeverity (Mild/Moderate/Severe) — se traduce en vez de copiar el
+                // string tal cual, que hubiera dejado un valor ("Severe") que ningún otro
+                // registro de CriticalAlert usa.
+                Severity = report.Severity == "Severe" ? "Critical" : "High",
+                Status = "Open",
+                Description = report.Symptoms,
+                GeneratedAt = report.ReportedAt
+            };
+            await _criticalAlertRepo.AddAsync(alert, ct);
+        }
+
         return ToDto(report);
     }
 

@@ -14,6 +14,14 @@ public class CreateBioimpedanceMeasurementValidator : AbstractValidator<CreateBi
             .InclusiveBetween(0, 300).When(x => x.WeightKg.HasValue)
             .WithMessage("WeightKg must be between 0 and 300 kg.");
 
+        RuleFor(x => x.MuscleMassKg)
+            .InclusiveBetween(0, 300).When(x => x.MuscleMassKg.HasValue)
+            .WithMessage("MuscleMassKg must be between 0 and 300 kg.");
+
+        RuleFor(x => x.BasalMetabolicRate)
+            .InclusiveBetween(500, 5000).When(x => x.BasalMetabolicRate.HasValue)
+            .WithMessage("BasalMetabolicRate must be between 500 and 5000 kcal/day.");
+
         RuleFor(x => x.FatPercentage)
             .InclusiveBetween(0, 100).When(x => x.FatPercentage.HasValue)
             .WithMessage("FatPercentage must be between 0 and 100 %.");

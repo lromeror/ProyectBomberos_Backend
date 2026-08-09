@@ -20,6 +20,7 @@ public class SymptomReportServiceTests
     private readonly Mock<ISymptomReportRepository> _mockRepo;
     private readonly Mock<ISessionParticipantRepository> _mockParticipantRepo;
     private readonly Mock<IUserRepository> _mockUserRepo;
+    private readonly Mock<ICriticalAlertRepository> _mockCriticalAlertRepo;
     private readonly Mock<IValidator<CreateSymptomReportRequest>> _mockValidator;
     private readonly SymptomReportService _sut;
 
@@ -28,6 +29,7 @@ public class SymptomReportServiceTests
         _mockRepo = new Mock<ISymptomReportRepository>();
         _mockParticipantRepo = new Mock<ISessionParticipantRepository>();
         _mockUserRepo = new Mock<IUserRepository>();
+        _mockCriticalAlertRepo = new Mock<ICriticalAlertRepository>();
         _mockValidator = new Mock<IValidator<CreateSymptomReportRequest>>();
 
         _mockValidator
@@ -35,7 +37,8 @@ public class SymptomReportServiceTests
             .ReturnsAsync(new ValidationResult());
 
         _sut = new SymptomReportService(
-            _mockRepo.Object, _mockParticipantRepo.Object, _mockUserRepo.Object, _mockValidator.Object);
+            _mockRepo.Object, _mockParticipantRepo.Object, _mockUserRepo.Object,
+            _mockCriticalAlertRepo.Object, _mockValidator.Object);
     }
 
     private static CreateSymptomReportRequest ValidRequest(Guid participantId, Guid userId) => new(
@@ -57,6 +60,42 @@ public class SymptomReportServiceTests
         result.SessionParticipantId.Should().Be(participantId);
         result.RequiresAlert.Should().BeTrue();
         _mockRepo.Verify(r => r.AddAsync(It.IsAny<SymptomReport>(), It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task CreateAsync_RequiresAlertTrue_CreatesCriticalAlert()
+    {
+        var participantId = Guid.NewGuid();
+        var userId = Guid.NewGuid();
+        _mockParticipantRepo.Setup(r => r.GetByIdAsync(participantId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new SessionParticipant { SessionParticipantId = participantId });
+        _mockUserRepo.Setup(r => r.GetByIdAsync(userId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new User { UserId = userId });
+
+        var result = await _sut.CreateAsync(ValidRequest(participantId, userId));
+
+        _mockCriticalAlertRepo.Verify(r => r.AddAsync(
+            It.Is<CriticalAlert>(a =>
+                a.SessionParticipantId == participantId
+                && a.SymptomReportId == result.SymptomReportId
+                && a.Status == "Open"),
+            It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task CreateAsync_RequiresAlertFalse_DoesNotCreateCriticalAlert()
+    {
+        var participantId = Guid.NewGuid();
+        var userId = Guid.NewGuid();
+        _mockParticipantRepo.Setup(r => r.GetByIdAsync(participantId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new SessionParticipant { SessionParticipantId = participantId });
+        _mockUserRepo.Setup(r => r.GetByIdAsync(userId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new User { UserId = userId });
+        var request = new CreateSymptomReportRequest(participantId, userId, "Mild", "Dolor leve", false);
+
+        await _sut.CreateAsync(request);
+
+        _mockCriticalAlertRepo.Verify(r => r.AddAsync(It.IsAny<CriticalAlert>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [Fact]

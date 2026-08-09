@@ -1,7 +1,6 @@
 using System.Text;
 using System.Text.Json;
 using BomberosAPI.API.Common.Responses;
-using BomberosAPI.Application.Common.Constants;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 
@@ -64,11 +63,15 @@ public static class AuthServiceExtensions
                 };
             });
 
-        services.AddAuthorizationBuilder()
-            .AddPolicy("AdminOnly",          p => p.RequireRole(Roles.Admin, Roles.SystemAdmin))
-            .AddPolicy("HealthPersonnel",    p => p.RequireRole(Roles.Medical, Roles.Admin, Roles.SystemAdmin))
-            .AddPolicy("InstructorOrAbove",  p => p.RequireRole(Roles.Capacitator, Roles.Admin, Roles.SystemAdmin))
-            .AddPolicy("Authenticated",      p => p.RequireAuthenticatedUser());
+        // Nota: se probó centralizar los sets de roles en policies con nombre
+        // (AddAuthorizationBuilder().AddPolicy(...)), pero ningún controller llegó a
+        // usarlas — todos siguen componiendo `Roles = "..."` inline por acción, con
+        // combinaciones más finas que las 4 policies genéricas que había acá (ver
+        // p.ej. TrainingSessionsController.ManageSessionRoles, que incluye FireChief).
+        // Las policies quedaban como código muerto que además había empezado a
+        // desincronizarse de los roles realmente exigidos — se retiran en vez de
+        // dejarlas como una fuente de verdad falsa.
+        services.AddAuthorization();
 
         return services;
     }

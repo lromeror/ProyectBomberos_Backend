@@ -170,6 +170,8 @@ CREATE TABLE [AccessAudit] (
     [user_agent]       nvarchar(500)    NULL,
     [success]          bit              NOT NULL,
     [occurred_at]      datetime2        NOT NULL,
+    [resource_id]      uniqueidentifier NULL,
+    [resource_type]    nvarchar(100)    NULL,
     CONSTRAINT [PK_AccessAudit] PRIMARY KEY ([access_audit_id])
 );
 
@@ -209,6 +211,7 @@ CREATE TABLE [HealthPersonnel] (
     [specialty]             nvarchar(100)    NULL,
     [license_number]        nvarchar(50)     NULL,
     [can_approve_discharges] bit             NOT NULL DEFAULT 0,
+    [is_active]             bit              NOT NULL DEFAULT 1,
     CONSTRAINT [PK_HealthPersonnel] PRIMARY KEY ([health_personnel_id])
 );
 
@@ -294,7 +297,12 @@ CREATE TABLE [VitalSignsMeasurement] (
     [systolic_pressure]                   decimal(5,2)     NULL,
     [diastolic_pressure]                  decimal(5,2)     NULL,
     [temperature_c]                       decimal(4,2)     NULL,
-    [spo2]                                decimal(4,2)     NULL,
+    -- decimal(5,2), no (4,2): un Spo2 = 100 (lectura sana común) desbordaba (4,2), que
+    -- solo llega a 99.99 (ver migración WidenPercentageColumnsPrecision).
+    [spo2]                                decimal(5,2)     NULL,
+    [practice_role]                       nvarchar(30)     NULL,
+    [is_smoker]                           bit              NULL,
+    [exposed_to_smoke_48h]                bit              NULL,
     [taken_at]                            datetime2        NOT NULL,
     CONSTRAINT [PK_VitalSignsMeasurement] PRIMARY KEY ([vital_signs_measurement_id])
 );
@@ -304,10 +312,17 @@ CREATE TABLE [BioimpedanceMeasurement] (
     [session_participant_id]              uniqueidentifier NOT NULL,
     [registered_by_health_personnel_id]   uniqueidentifier NOT NULL,
     [weight_kg]                           decimal(5,2)     NULL,
-    [fat_percentage]                      decimal(4,2)     NULL,
+    -- decimal(5,2), no (4,2): 100% de grasa/agua corporal (límite válido del
+    -- validador) desbordaba (4,2), que solo llega a 99.99.
+    [fat_percentage]                      decimal(5,2)     NULL,
     [muscle_mass_kg]                      decimal(5,2)     NULL,
-    [body_water_pct]                      decimal(4,2)     NULL,
+    [body_water_pct]                      decimal(5,2)     NULL,
     [basal_metabolic_rate]                decimal(7,2)     NULL,
+    [metabolic_age_years]                 decimal(5,2)     NULL,
+    [lactate_pre_mmol]                    decimal(4,2)     NULL,
+    [lactate_post_mmol]                   decimal(4,2)     NULL,
+    [stroop_time_seconds]                 decimal(6,2)     NULL,
+    [stroop_errors]                       int              NULL,
     [taken_at]                            datetime2        NOT NULL,
     CONSTRAINT [PK_BioimpedanceMeasurement] PRIMARY KEY ([bioimpedance_measurement_id])
 );
@@ -317,7 +332,9 @@ CREATE TABLE [EnvironmentalData] (
     [training_session_id]    uniqueidentifier NOT NULL,
     [registered_by_user_id]  uniqueidentifier NOT NULL,
     [temperature_c]          decimal(4,2)     NULL,
-    [humidity_pct]           decimal(4,2)     NULL,
+    -- decimal(5,2), no (4,2): 100% de humedad relativa (lluvia/ambiente saturado, un
+    -- valor real) desbordaba (4,2), que solo llega a 99.99.
+    [humidity_pct]           decimal(5,2)     NULL,
     [co_ppm]                 decimal(7,2)     NULL,
     [heat_stress_index]      decimal(5,2)     NULL,
     [measured_at]            datetime2        NOT NULL,
@@ -675,7 +692,11 @@ ALTER TABLE [DSARRequest] ADD CONSTRAINT [FK_DSARRequest_ManagedByUser]
 -- ============================================================
 
 INSERT INTO [__EFMigrationsHistory] ([MigrationId], [ProductVersion])
-VALUES (N'20260623233804_InitialCreate', N'10.0.8');
+VALUES
+    (N'20260623233804_InitialCreate', N'10.0.8'),
+    (N'20260730023207_AddHealthPersonnelStatusResearchMarkersAndAuditResource', N'10.0.8'),
+    (N'20260802052343_AddVitalSignsPracticeContextFields', N'10.0.8'),
+    (N'20260808182911_WidenPercentageColumnsPrecision', N'10.0.8');
 
 COMMIT;
 GO

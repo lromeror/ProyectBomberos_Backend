@@ -11,6 +11,10 @@ namespace BomberosAPI.API.Controllers;
 [Authorize]
 public class EnvironmentalDataController : ControllerBase
 {
+    // Mismo set de roles que ya podía crear estos registros.
+    private const string StaffRoles = Roles.Medical + "," + Roles.Admin + "," + Roles.SystemAdmin
+        + "," + Roles.Capacitator + "," + Roles.FireChief;
+
     private readonly EnvironmentalDataService _service;
 
     public EnvironmentalDataController(EnvironmentalDataService service)
@@ -19,6 +23,7 @@ public class EnvironmentalDataController : ControllerBase
     }
 
     [HttpGet]
+    [Authorize(Roles = StaffRoles)]
     [ProducesResponseType(typeof(ApiResponse<IReadOnlyList<EnvironmentalDataDto>>), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetAll(CancellationToken ct)
     {
@@ -27,6 +32,7 @@ public class EnvironmentalDataController : ControllerBase
     }
 
     [HttpGet("{id:guid}")]
+    [Authorize(Roles = StaffRoles)]
     [ProducesResponseType(typeof(ApiResponse<EnvironmentalDataDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ApiResponse<object?>), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetById(Guid id, CancellationToken ct)
@@ -36,6 +42,7 @@ public class EnvironmentalDataController : ControllerBase
     }
 
     [HttpGet("by-session/{sessionId:guid}")]
+    [Authorize(Roles = StaffRoles)]
     [ProducesResponseType(typeof(ApiResponse<IReadOnlyList<EnvironmentalDataDto>>), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetBySession(Guid sessionId, CancellationToken ct)
     {

@@ -18,6 +18,11 @@
     <PackageReference Include="Microsoft.Extensions.Hosting.WindowsServices" Version="10.0.0" />
     <PackageReference Include="Scalar.AspNetCore" Version="2.14.14" />
     <PackageReference Include="Swashbuckle.AspNetCore" Version="10.1.7" />
+    <!-- Referencia directa para forzar una versión parcheada por encima de la 2.4.1
+         transitiva de Swashbuckle.AspNetCore (NU1903: GHSA-v5pm-xwqc-g5wc). Se elige
+         un bump de parche menor (2.4.3), no la última disponible, para minimizar el
+         riesgo de incompatibilidad con Swashbuckle 10.1.7. -->
+    <PackageReference Include="Microsoft.OpenApi" Version="2.11.0" />
   </ItemGroup>
 
   <ItemGroup>

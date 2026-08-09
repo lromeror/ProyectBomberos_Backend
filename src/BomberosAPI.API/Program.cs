@@ -49,7 +49,6 @@ var corsOrigins = configuredOrigins is { Length: > 0 }
         "http://localhost:8081",
         "http://localhost:19006",
         "http://localhost:3000",
-        "http://100.89.25.34:8081",
       ];
 
 builder.Services.AddCors(options =>
