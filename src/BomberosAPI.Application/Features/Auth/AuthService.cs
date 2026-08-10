@@ -4,6 +4,7 @@ using BomberosAPI.Application.Common.Exceptions;
 using BomberosAPI.Application.Common.Interfaces;
 using BomberosAPI.Domain.Entities;
 using FluentValidation;
+using Microsoft.Extensions.Logging;
 using AppValidationException = BomberosAPI.Application.Common.Exceptions.ValidationException;
 
 namespace BomberosAPI.Application.Features.Auth;
@@ -23,6 +24,9 @@ public class AuthService
     private readonly IValidator<ResetPasswordRequest> _resetValidator;
     private readonly IValidator<ChangePasswordRequest> _changePasswordValidator;
     private readonly AuthSessionService _authSessionService;
+    private readonly IEmailSender _emailSender;
+    private readonly IAppUrlProvider _appUrl;
+    private readonly ILogger<AuthService> _logger;
 
     public AuthService(
         IAuthRepository repo,
@@ -32,7 +36,10 @@ public class AuthService
         IValidator<ForgotPasswordRequest> forgotValidator,
         IValidator<ResetPasswordRequest> resetValidator,
         IValidator<ChangePasswordRequest> changePasswordValidator,
-        AuthSessionService authSessionService)
+        AuthSessionService authSessionService,
+        IEmailSender emailSender,
+        IAppUrlProvider appUrl,
+        ILogger<AuthService> logger)
     {
         _repo = repo;
         _passwordHasher = passwordHasher;
@@ -42,6 +49,9 @@ public class AuthService
         _resetValidator = resetValidator;
         _changePasswordValidator = changePasswordValidator;
         _authSessionService = authSessionService;
+        _emailSender = emailSender;
+        _appUrl = appUrl;
+        _logger = logger;
     }
 
     public async Task<LoginResult> LoginAsync(LoginRequest request, CancellationToken ct = default, string? ip = null, string? userAgent = null)
@@ -137,9 +147,31 @@ public class AuthService
 
         await _repo.AddPasswordResetTokenAsync(resetToken, ct);
 
-        // Sin servicio de email — devuelve el token para uso en desarrollo
+        var link = $"{_appUrl.WebBaseUrl}/restablecer-contrasena?token={Uri.EscapeDataString(rawToken)}";
+        try
+        {
+            await _emailSender.SendAsync(user.Email, "Restablece tu contraseña — FireHealth App",
+                BuildResetPasswordEmailHtml(user.FirstName, link), ct);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "No se pudo enviar el correo de reseteo de contraseña a {Email}", user.Email);
+        }
+
+        // El token también se devuelve en la respuesta — conveniencia para pruebas/demo
+        // (ForgotPasswordScreen lo autocompleta si llega); en producción el correo real
+        // es el canal esperado.
         return new ForgotPasswordResult(rawToken);
     }
+
+    private static string BuildResetPasswordEmailHtml(string firstName, string link) =>
+        "<div style=\"font-family: -apple-system, Segoe UI, Roboto, sans-serif; max-width: 480px; margin: 0 auto;\">"
+        + "<h2 style=\"color: #D9531F;\">Restablece tu contraseña</h2>"
+        + $"<p>Hola {System.Net.WebUtility.HtmlEncode(firstName)},</p>"
+        + "<p>Recibimos una solicitud para restablecer tu contraseña. Si fuiste tú:</p>"
+        + $"<p style=\"margin: 24px 0;\"><a href=\"{link}\" style=\"background: #D9531F; color: #fff; padding: 12px 20px; border-radius: 8px; text-decoration: none; font-weight: 700;\">Restablecer contraseña</a></p>"
+        + "<p style=\"color: #666; font-size: 13px;\">Este enlace vence en 1 hora. Si no lo pediste tú, puedes ignorar este correo.</p>"
+        + "</div>";
 
     public async Task ResetPasswordAsync(ResetPasswordRequest request, CancellationToken ct = default)
     {

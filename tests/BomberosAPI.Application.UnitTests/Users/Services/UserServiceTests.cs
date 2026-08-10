@@ -4,12 +4,14 @@ using System.Threading;
 using System.Threading.Tasks;
 using BomberosAPI.Application.Common.Exceptions;
 using BomberosAPI.Application.Features.Audit;
+using BomberosAPI.Application.Features.Auth;
 using BomberosAPI.Application.Features.Users;
 using BomberosAPI.Domain.Entities;
 using BomberosAPI.Domain.Repositories;
 using FluentAssertions;
 using FluentValidation;
 using FluentValidation.Results;
+using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
 
@@ -22,6 +24,8 @@ public class UserServiceTests
     private readonly Mock<IUserRoleRepository> _mockUserRoleRepo;
     private readonly Mock<IValidator<CreateUserRequest>> _mockValidator;
     private readonly Mock<IChangeAuditRepository> _mockChangeAuditRepo;
+    private readonly Mock<IRegistrationService> _mockRegistrationService;
+    private readonly Mock<ILogger<UserService>> _mockLogger;
     private readonly UserService _sut;
 
     public UserServiceTests()
@@ -31,13 +35,15 @@ public class UserServiceTests
         _mockUserRoleRepo = new Mock<IUserRoleRepository>();
         _mockValidator = new Mock<IValidator<CreateUserRequest>>();
         _mockChangeAuditRepo = new Mock<IChangeAuditRepository>();
+        _mockRegistrationService = new Mock<IRegistrationService>();
+        _mockLogger = new Mock<ILogger<UserService>>();
 
         _mockValidator
             .Setup(v => v.ValidateAsync(It.IsAny<CreateUserRequest>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new ValidationResult());
 
         _sut = new UserService(_mockRepo.Object, _mockRoleRepo.Object, _mockUserRoleRepo.Object, _mockValidator.Object,
-            new ChangeAuditService(_mockChangeAuditRepo.Object));
+            new ChangeAuditService(_mockChangeAuditRepo.Object), _mockRegistrationService.Object, _mockLogger.Object);
     }
 
     [Fact]

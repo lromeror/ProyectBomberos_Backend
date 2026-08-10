@@ -24,6 +24,7 @@ builder.Services.AddInfrastructure(builder.Configuration);
 
 // Application services
 builder.Services.AddScoped<AuthService>();
+builder.Services.AddScoped<IRegistrationService, RegistrationService>();
 builder.Services.AddScoped<TrainingSessionService>();
 builder.Services.AddScoped<TraineeFirefighterService>();
 builder.Services.AddScoped<HealthPersonnelService>();

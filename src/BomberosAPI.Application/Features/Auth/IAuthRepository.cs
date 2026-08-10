@@ -11,4 +11,11 @@ public interface IAuthRepository
     Task<PasswordResetToken?> FindValidResetTokenByHashAsync(string tokenHash, CancellationToken ct = default);
     Task AddPasswordResetTokenAsync(PasswordResetToken token, CancellationToken ct = default);
     Task UpdatePasswordResetTokenAsync(PasswordResetToken token, CancellationToken ct = default);
+
+    Task<AccountActivationToken?> FindValidActivationTokenByHashAsync(string tokenHash, CancellationToken ct = default);
+    Task AddActivationTokenAsync(AccountActivationToken token, CancellationToken ct = default);
+    Task UpdateActivationTokenAsync(AccountActivationToken token, CancellationToken ct = default);
+    Task AddCredentialAsync(UserCredential credential, CancellationToken ct = default);
+    Task<User?> FindUserByIdAsync(Guid userId, CancellationToken ct = default);
+    Task UpdateUserAsync(User user, CancellationToken ct = default);
 }

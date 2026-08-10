@@ -27,6 +27,7 @@ public class AppDbContext : DbContext
     public DbSet<UserCredential> UserCredentials => Set<UserCredential>();
     public DbSet<AuthSession> AuthSessions => Set<AuthSession>();
     public DbSet<PasswordResetToken> PasswordResetTokens => Set<PasswordResetToken>();
+    public DbSet<AccountActivationToken> AccountActivationTokens => Set<AccountActivationToken>();
     public DbSet<ConsentDocument> ConsentDocuments => Set<ConsentDocument>();
     public DbSet<UserConsent> UserConsents => Set<UserConsent>();
     public DbSet<DSARRequest> DSARRequests => Set<DSARRequest>();

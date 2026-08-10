@@ -36,6 +36,10 @@ public static class DependencyInjection
         IConfiguration configuration)
     {
         services.Configure<JwtSettings>(configuration.GetSection(JwtSettings.SectionName));
+        services.Configure<ResendSettings>(configuration.GetSection(ResendSettings.SectionName));
+        services.Configure<AppUrlSettings>(configuration.GetSection(AppUrlSettings.SectionName));
+        services.AddSingleton<IAppUrlProvider, AppUrlProvider>();
+        services.AddHttpClient<IEmailSender, ResendEmailSender>();
 
         services.AddScoped<IAccessAuditRepository, AccessAuditRepository>();
         services.AddScoped<AccessAuditService>();

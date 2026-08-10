@@ -53,4 +53,37 @@ public class AuthRepository : IAuthRepository
         _db.PasswordResetTokens.Update(token);
         await _db.SaveChangesAsync(ct);
     }
+
+    public Task<AccountActivationToken?> FindValidActivationTokenByHashAsync(string tokenHash, CancellationToken ct = default) =>
+        _db.AccountActivationTokens
+           .FirstOrDefaultAsync(t => t.TokenHash == tokenHash
+                                  && t.Status == "pending"
+                                  && t.ExpiresAt > DateTime.UtcNow, ct);
+
+    public async Task AddActivationTokenAsync(AccountActivationToken token, CancellationToken ct = default)
+    {
+        _db.AccountActivationTokens.Add(token);
+        await _db.SaveChangesAsync(ct);
+    }
+
+    public async Task UpdateActivationTokenAsync(AccountActivationToken token, CancellationToken ct = default)
+    {
+        _db.AccountActivationTokens.Update(token);
+        await _db.SaveChangesAsync(ct);
+    }
+
+    public async Task AddCredentialAsync(UserCredential credential, CancellationToken ct = default)
+    {
+        _db.UserCredentials.Add(credential);
+        await _db.SaveChangesAsync(ct);
+    }
+
+    public Task<User?> FindUserByIdAsync(Guid userId, CancellationToken ct = default) =>
+        _db.Users.FirstOrDefaultAsync(u => u.UserId == userId, ct);
+
+    public async Task UpdateUserAsync(User user, CancellationToken ct = default)
+    {
+        _db.Users.Update(user);
+        await _db.SaveChangesAsync(ct);
+    }
 }

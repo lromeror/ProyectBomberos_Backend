@@ -12,12 +12,18 @@ public class AuthController : ControllerBase
 {
     private readonly AuthService _authService;
     private readonly AuthSessionService _authSessionService;
+    private readonly IRegistrationService _registrationService;
     private readonly ICurrentUserService _currentUser;
 
-    public AuthController(AuthService authService, AuthSessionService authSessionService, ICurrentUserService currentUser)
+    public AuthController(
+        AuthService authService,
+        AuthSessionService authSessionService,
+        IRegistrationService registrationService,
+        ICurrentUserService currentUser)
     {
         _authService = authService;
         _authSessionService = authSessionService;
+        _registrationService = registrationService;
         _currentUser = currentUser;
     }
 
@@ -91,6 +97,36 @@ public class AuthController : ControllerBase
     {
         await _authService.ChangePasswordAsync(_currentUser.UserId, request, ct);
         return Ok(ApiResponse<object?>.Ok(null, "Contraseña actualizada exitosamente."));
+    }
+
+    /// <summary>Datos de una invitación pendiente a partir de su token — usado por la pantalla de registro para saber qué campos pedir.</summary>
+    [HttpGet("invitation-preview")]
+    [ProducesResponseType(typeof(ApiResponse<InvitationPreviewResult>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiResponse<object?>), StatusCodes.Status400BadRequest)]
+    public async Task<IActionResult> InvitationPreview([FromQuery] string token, CancellationToken ct)
+    {
+        var result = await _registrationService.PreviewInvitationAsync(token, ct);
+        return Ok(ApiResponse<InvitationPreviewResult>.Ok(result));
+    }
+
+    /// <summary>Crea la cuenta a partir de una invitación por correo (cualquier rol) — token de un solo uso.</summary>
+    [HttpPost("complete-registration")]
+    [ProducesResponseType(typeof(ApiResponse<object?>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiResponse<object?>), StatusCodes.Status400BadRequest)]
+    public async Task<IActionResult> CompleteRegistration([FromBody] CompleteRegistrationRequest request, CancellationToken ct)
+    {
+        await _registrationService.CompleteRegistrationAsync(request, ct);
+        return Ok(ApiResponse<object?>.Ok(null, "Cuenta creada exitosamente. Ya puedes iniciar sesión."));
+    }
+
+    /// <summary>Pone la contraseña inicial de una cuenta creada directamente (ej. "Agregar Personal") — token de un solo uso.</summary>
+    [HttpPost("activate-account")]
+    [ProducesResponseType(typeof(ApiResponse<object?>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiResponse<object?>), StatusCodes.Status400BadRequest)]
+    public async Task<IActionResult> ActivateAccount([FromBody] ActivateAccountRequest request, CancellationToken ct)
+    {
+        await _registrationService.ActivateAccountAsync(request, ct);
+        return Ok(ApiResponse<object?>.Ok(null, "Cuenta activada exitosamente. Ya puedes iniciar sesión."));
     }
 }
 

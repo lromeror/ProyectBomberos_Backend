@@ -1,9 +1,11 @@
 using BomberosAPI.Application.Common.Constants;
 using BomberosAPI.Application.Common.Exceptions;
 using BomberosAPI.Application.Features.Audit;
+using BomberosAPI.Application.Features.Auth;
 using BomberosAPI.Domain.Entities;
 using BomberosAPI.Domain.Repositories;
 using FluentValidation;
+using Microsoft.Extensions.Logging;
 using AppValidationException = BomberosAPI.Application.Common.Exceptions.ValidationException;
 
 namespace BomberosAPI.Application.Features.Users;
@@ -23,19 +25,25 @@ public class UserService
     private readonly IUserRoleRepository _userRoleRepo;
     private readonly IValidator<CreateUserRequest> _createValidator;
     private readonly ChangeAuditService _changeAudit;
+    private readonly IRegistrationService _registrationService;
+    private readonly ILogger<UserService> _logger;
 
     public UserService(
         IUserRepository repo,
         IRoleRepository roleRepo,
         IUserRoleRepository userRoleRepo,
         IValidator<CreateUserRequest> createValidator,
-        ChangeAuditService changeAudit)
+        ChangeAuditService changeAudit,
+        IRegistrationService registrationService,
+        ILogger<UserService> logger)
     {
         _repo = repo;
         _roleRepo = roleRepo;
         _userRoleRepo = userRoleRepo;
         _createValidator = createValidator;
         _changeAudit = changeAudit;
+        _registrationService = registrationService;
+        _logger = logger;
     }
 
     public async Task<IReadOnlyList<UserDto>> GetAllAsync(CancellationToken ct = default)
@@ -84,6 +92,20 @@ public class UserService
         };
 
         await _repo.AddAsync(user, ct);
+
+        // Sin esto la cuenta quedaba creada pero sin ninguna credencial (ni forma de
+        // recuperar contraseña, porque ResetPasswordAsync exige una credencial YA
+        // EXISTENTE) — un correo real transitoriamente caído no debe tumbar el alta ya
+        // hecha, así que se registra el fallo en vez de fallar toda la operación.
+        try
+        {
+            await _registrationService.SendActivationEmailAsync(user.UserId, user.Email, user.FirstName, ct);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "No se pudo enviar el correo de activación a {Email} (usuario {UserId})", user.Email, user.UserId);
+        }
+
         return ToDto(user);
     }
 

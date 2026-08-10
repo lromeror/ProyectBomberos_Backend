@@ -10,6 +10,7 @@ using BomberosAPI.Domain.Repositories;
 using FluentAssertions;
 using FluentValidation;
 using FluentValidation.Results;
+using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
 
@@ -25,6 +26,9 @@ public class AuthServiceTests
     private readonly Mock<IValidator<ResetPasswordRequest>> _mockResetValidator;
     private readonly Mock<IValidator<ChangePasswordRequest>> _mockChangePasswordValidator;
     private readonly Mock<IAuthSessionRepository> _mockAuthSessionRepo;
+    private readonly Mock<IEmailSender> _mockEmailSender;
+    private readonly Mock<IAppUrlProvider> _mockAppUrl;
+    private readonly Mock<ILogger<AuthService>> _mockLogger;
     private readonly AuthService _sut; // System Under Test
 
     public AuthServiceTests()
@@ -37,6 +41,10 @@ public class AuthServiceTests
         _mockResetValidator = new Mock<IValidator<ResetPasswordRequest>>();
         _mockChangePasswordValidator = new Mock<IValidator<ChangePasswordRequest>>();
         _mockAuthSessionRepo = new Mock<IAuthSessionRepository>();
+        _mockEmailSender = new Mock<IEmailSender>();
+        _mockAppUrl = new Mock<IAppUrlProvider>();
+        _mockAppUrl.SetupGet(a => a.WebBaseUrl).Returns("http://localhost:8081");
+        _mockLogger = new Mock<ILogger<AuthService>>();
 
         // Configuración por defecto: la validación del request pasa exitosamente
         _mockValidator
@@ -51,7 +59,10 @@ public class AuthServiceTests
             _mockForgotValidator.Object,
             _mockResetValidator.Object,
             _mockChangePasswordValidator.Object,
-            new AuthSessionService(_mockAuthSessionRepo.Object));
+            new AuthSessionService(_mockAuthSessionRepo.Object),
+            _mockEmailSender.Object,
+            _mockAppUrl.Object,
+            _mockLogger.Object);
     }
 
     [Fact]

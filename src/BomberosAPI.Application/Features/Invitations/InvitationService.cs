@@ -1,36 +1,58 @@
-﻿using BomberosAPI.Application.Common.Exceptions;
+﻿using System.Security.Cryptography;
+using System.Text;
+using BomberosAPI.Application.Common.Exceptions;
 using BomberosAPI.Application.Common.Interfaces;
 using BomberosAPI.Application.Features.Participants;
 using BomberosAPI.Domain.Entities;
 using BomberosAPI.Domain.Repositories;
 using FluentValidation;
+using Microsoft.Extensions.Logging;
 using AppValidationException = BomberosAPI.Application.Common.Exceptions.ValidationException;
 
 namespace BomberosAPI.Application.Features.Invitations;
 
 public class InvitationService
 {
+    // Igual que UserService.PrivilegedRoles — solo SYSTEM_ADMIN puede invitar a alguien
+    // directo a un rol de este nivel. Evita que ADMIN/CAPACITATOR/FIRE_CHIEF (que también
+    // pueden crear invitaciones) se otorguen o le otorguen a otro más privilegio del que
+    // deberían poder repartir.
+    private static readonly HashSet<string> PrivilegedRoles = new(StringComparer.OrdinalIgnoreCase)
+    {
+        BomberosAPI.Application.Common.Constants.Roles.SystemAdmin,
+        BomberosAPI.Application.Common.Constants.Roles.Admin,
+    };
+
     private readonly IInvitationRepository _repo;
     private readonly ISessionParticipantRepository _participantRepo;
     private readonly ITraineeFirefighterRepository _traineeRepo;
-    private readonly IPasswordHasher _hasher;
+    private readonly IRoleRepository _roleRepo;
+    private readonly IEmailSender _emailSender;
+    private readonly IAppUrlProvider _appUrl;
     private readonly IValidator<CreateInvitationRequest> _createValidator;
     private readonly ICurrentUserService _currentUser;
+    private readonly ILogger<InvitationService> _logger;
 
     public InvitationService(
         IInvitationRepository repo,
         ISessionParticipantRepository participantRepo,
         ITraineeFirefighterRepository traineeRepo,
-        IPasswordHasher hasher,
+        IRoleRepository roleRepo,
+        IEmailSender emailSender,
+        IAppUrlProvider appUrl,
         IValidator<CreateInvitationRequest> createValidator,
-        ICurrentUserService currentUser)
+        ICurrentUserService currentUser,
+        ILogger<InvitationService> logger)
     {
         _repo = repo;
         _participantRepo = participantRepo;
         _traineeRepo = traineeRepo;
-        _hasher = hasher;
+        _roleRepo = roleRepo;
+        _emailSender = emailSender;
+        _appUrl = appUrl;
         _createValidator = createValidator;
         _currentUser = currentUser;
+        _logger = logger;
     }
 
     public async Task<IReadOnlyList<InvitationDto>> GetAllAsync(CancellationToken ct = default)
@@ -57,9 +79,27 @@ public class InvitationService
             throw new AppValidationException(errors);
         }
 
-        // Generate a random token (UUID-based, unique and unguessable)
-        var plainToken = Guid.NewGuid().ToString("N") + Guid.NewGuid().ToString("N");
-        var tokenHash = _hasher.Hash(plainToken);
+        Role? targetRole = null;
+        if (!string.IsNullOrWhiteSpace(request.TargetRoleCode))
+        {
+            targetRole = await _roleRepo.GetByCodeAsync(request.TargetRoleCode, ct)
+                ?? throw new NotFoundException("Role", request.TargetRoleCode);
+
+            // Solo SYSTEM_ADMIN puede repartir invitaciones a un rol de este nivel — el
+            // que crea la invitación decide qué cuenta se crea al aceptarla, así que este
+            // es exactamente el mismo punto de escalamiento que UserService.UpdateRolesAsync
+            // ya protege para el alta directa.
+            if (PrivilegedRoles.Contains(targetRole.Code) && !_currentUser.IsInRole(BomberosAPI.Application.Common.Constants.Roles.SystemAdmin))
+                throw new ForbiddenException();
+        }
+
+        // Token aleatorio, con hash determinístico (SHA256) para poder buscarlo por su
+        // valor plano cuando alguien completa el registro — bcrypt (lo que se usaba
+        // antes) genera un salt distinto en cada llamada, así que nunca iba a poder
+        // recuperarse por igualdad de hash: GetByTokenHashAsync existía pero jamás
+        // encontraba nada.
+        var plainToken = Convert.ToBase64String(RandomNumberGenerator.GetBytes(32));
+        var tokenHash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(plainToken)));
 
         var invitation = new Invitation
         {
@@ -69,7 +109,7 @@ public class InvitationService
     : throw new UnauthorizedException("No authenticated user."),
             TargetUserId = request.TargetUserId,
             TrainingSessionId = request.TrainingSessionId,
-            TargetRoleId = request.TargetRoleId,
+            TargetRoleId = targetRole?.RoleId,
             TargetEmail = request.TargetEmail,
             InvitationTokenHash = tokenHash,
             Status = "Pending",
@@ -79,9 +119,35 @@ public class InvitationService
 
         await _repo.AddAsync(invitation, ct);
 
+        // Solo se manda correo cuando la invitación es para alguien SIN cuenta todavía
+        // (TargetUserId nulo) — las invitaciones a una sesión para alguien que ya tiene
+        // cuenta se ven dentro de la propia app (Cola de Validación / dashboards), no
+        // necesitan un enlace externo.
+        if (request.TargetUserId is null)
+        {
+            var link = $"{_appUrl.WebBaseUrl}/completar-registro?type=invite&token={Uri.EscapeDataString(plainToken)}";
+            try
+            {
+                await _emailSender.SendAsync(request.TargetEmail, "Te invitaron a FireHealth App",
+                    BuildInvitationEmailHtml(link), ct);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "No se pudo enviar el correo de invitación a {Email}", request.TargetEmail);
+            }
+        }
+
         // Return the plain token ONCE — never stored, never retrievable again
         return new CreateInvitationResponse(ToDto(invitation), plainToken);
     }
+
+    private static string BuildInvitationEmailHtml(string link) =>
+        "<div style=\"font-family: -apple-system, Segoe UI, Roboto, sans-serif; max-width: 480px; margin: 0 auto;\">"
+        + "<h2 style=\"color: #D9531F;\">Te invitaron a FireHealth App</h2>"
+        + "<p>Completa tu registro para empezar a usar la app:</p>"
+        + $"<p style=\"margin: 24px 0;\"><a href=\"{link}\" style=\"background: #D9531F; color: #fff; padding: 12px 20px; border-radius: 8px; text-decoration: none; font-weight: 700;\">Completar registro</a></p>"
+        + "<p style=\"color: #666; font-size: 13px;\">Este enlace vence en 7 días. Si no esperabas este correo, puedes ignorarlo.</p>"
+        + "</div>";
 
     public Task<SessionParticipantDto?> AcceptAsync(Guid id, CancellationToken ct = default) =>
         AcceptCoreAsync(id, enforceRecipient: true, ct);

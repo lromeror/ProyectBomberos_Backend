@@ -10,6 +10,7 @@ using BomberosAPI.Domain.Repositories;
 using FluentAssertions;
 using FluentValidation;
 using FluentValidation.Results;
+using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
 using ValidationException = BomberosAPI.Application.Common.Exceptions.ValidationException;
@@ -21,9 +22,12 @@ public class InvitationServiceTests
     private readonly Mock<IInvitationRepository> _mockRepo;
     private readonly Mock<ISessionParticipantRepository> _mockParticipantRepo;
     private readonly Mock<ITraineeFirefighterRepository> _mockTraineeRepo;
-    private readonly Mock<IPasswordHasher> _mockHasher;
+    private readonly Mock<IRoleRepository> _mockRoleRepo;
+    private readonly Mock<IEmailSender> _mockEmailSender;
+    private readonly Mock<IAppUrlProvider> _mockAppUrl;
     private readonly Mock<IValidator<CreateInvitationRequest>> _mockValidator;
     private readonly Mock<ICurrentUserService> _mockCurrentUser;
+    private readonly Mock<ILogger<InvitationService>> _mockLogger;
     private readonly InvitationService _sut;
 
     public InvitationServiceTests()
@@ -31,9 +35,13 @@ public class InvitationServiceTests
         _mockRepo = new Mock<IInvitationRepository>();
         _mockParticipantRepo = new Mock<ISessionParticipantRepository>();
         _mockTraineeRepo = new Mock<ITraineeFirefighterRepository>();
-        _mockHasher = new Mock<IPasswordHasher>();
+        _mockRoleRepo = new Mock<IRoleRepository>();
+        _mockEmailSender = new Mock<IEmailSender>();
+        _mockAppUrl = new Mock<IAppUrlProvider>();
+        _mockAppUrl.SetupGet(a => a.WebBaseUrl).Returns("http://localhost:8081");
         _mockValidator = new Mock<IValidator<CreateInvitationRequest>>();
         _mockCurrentUser = new Mock<ICurrentUserService>();
+        _mockLogger = new Mock<ILogger<InvitationService>>();
 
         _mockValidator
             .Setup(v => v.ValidateAsync(It.IsAny<CreateInvitationRequest>(), It.IsAny<CancellationToken>()))
@@ -41,15 +49,17 @@ public class InvitationServiceTests
 
         _mockCurrentUser.SetupGet(c => c.IsAuthenticated).Returns(true);
         _mockCurrentUser.SetupGet(c => c.UserId).Returns(Guid.NewGuid());
-        _mockHasher.Setup(h => h.Hash(It.IsAny<string>())).Returns("hashedToken");
 
         _sut = new InvitationService(
             _mockRepo.Object,
             _mockParticipantRepo.Object,
             _mockTraineeRepo.Object,
-            _mockHasher.Object,
+            _mockRoleRepo.Object,
+            _mockEmailSender.Object,
+            _mockAppUrl.Object,
             _mockValidator.Object,
-            _mockCurrentUser.Object);
+            _mockCurrentUser.Object,
+            _mockLogger.Object);
     }
 
     [Fact]
@@ -83,7 +93,7 @@ public class InvitationServiceTests
     [Fact]
     public async Task CreateAsync_ValidRequest_ReturnsDtoAndToken()
     {
-        var request = new CreateInvitationRequest(Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), "test@test.com", DateTime.UtcNow.AddDays(1));
+        var request = new CreateInvitationRequest(Guid.NewGuid(), Guid.NewGuid(), null, "test@test.com", DateTime.UtcNow.AddDays(1));
 
         var result = await _sut.CreateAsync(request);
 
@@ -96,7 +106,7 @@ public class InvitationServiceTests
     [Fact]
     public async Task CreateAsync_UnauthenticatedUser_ThrowsUnauthorizedException()
     {
-        var request = new CreateInvitationRequest(Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), "test@test.com", DateTime.UtcNow.AddDays(1));
+        var request = new CreateInvitationRequest(Guid.NewGuid(), Guid.NewGuid(), null, "test@test.com", DateTime.UtcNow.AddDays(1));
         _mockCurrentUser.SetupGet(c => c.IsAuthenticated).Returns(false);
 
         var act = async () => await _sut.CreateAsync(request);
@@ -111,7 +121,7 @@ public class InvitationServiceTests
     [Fact]
     public async Task CreateAsync_InvalidRequest_ThrowsValidationException()
     {
-        var request = new CreateInvitationRequest(Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), "test@test.com", DateTime.UtcNow.AddDays(1));
+        var request = new CreateInvitationRequest(Guid.NewGuid(), Guid.NewGuid(), null, "test@test.com", DateTime.UtcNow.AddDays(1));
         var validationResult = new ValidationResult(new[] { new ValidationFailure("TargetEmail", "Invalid") });
         _mockValidator.Setup(v => v.ValidateAsync(request, It.IsAny<CancellationToken>())).ReturnsAsync(validationResult);
 

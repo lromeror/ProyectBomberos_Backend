@@ -9,6 +9,7 @@ public class User
     public string LastName { get; set; } = null!;
     public string? Phone { get; set; }
     public string AccountStatus { get; set; } = "active";
+    public bool EmailVerified { get; set; }
     public DateTime CreatedAt { get; set; }
     public DateTime? LastAccessAt { get; set; }
 }
