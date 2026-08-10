@@ -83,12 +83,25 @@ public class InvitationService
         return new CreateInvitationResponse(ToDto(invitation), plainToken);
     }
 
-    public async Task<SessionParticipantDto?> AcceptAsync(Guid id, CancellationToken ct = default)
+    public Task<SessionParticipantDto?> AcceptAsync(Guid id, CancellationToken ct = default) =>
+        AcceptCoreAsync(id, enforceRecipient: true, ct);
+
+    // Aprobación por parte del personal de validación (MEDICAL/ADMIN/SYSTEM_ADMIN) en
+    // nombre del destinatario real de la invitación — el flujo de la pantalla "Cola de
+    // Validaciones" del frontend, que revisa invitaciones de terceros. Deliberadamente
+    // NO reutiliza el chequeo de EnsureIsRecipient (que sigue exigiendo, sin cambios,
+    // que AcceptAsync/RejectAsync solo los use el propio destinatario): esta es una vía
+    // separada y explícita, autorizada solo por rol a nivel de controller
+    // ([Authorize(Roles = ...)] en InvitationsController.StaffAccept/StaffReject).
+    public Task<SessionParticipantDto?> StaffAcceptAsync(Guid id, CancellationToken ct = default) =>
+        AcceptCoreAsync(id, enforceRecipient: false, ct);
+
+    private async Task<SessionParticipantDto?> AcceptCoreAsync(Guid id, bool enforceRecipient, CancellationToken ct)
     {
         var invitation = await _repo.GetByIdAsync(id, ct)
             ?? throw new NotFoundException("Invitation", id);
 
-        EnsureIsRecipient(invitation);
+        if (enforceRecipient) EnsureIsRecipient(invitation);
         EnsurePending(invitation);
         EnsureNotExpired(invitation);
 
@@ -129,12 +142,20 @@ public class InvitationService
             participant.Observations);
     }
 
-    public async Task RejectAsync(Guid id, CancellationToken ct = default)
+    public Task RejectAsync(Guid id, CancellationToken ct = default) =>
+        RejectCoreAsync(id, enforceRecipient: true, ct);
+
+    /// See StaffAcceptAsync — misma vía separada y explícita para el personal de
+    /// validación, sin tocar el chequeo EnsureIsRecipient de RejectAsync.
+    public Task StaffRejectAsync(Guid id, CancellationToken ct = default) =>
+        RejectCoreAsync(id, enforceRecipient: false, ct);
+
+    private async Task RejectCoreAsync(Guid id, bool enforceRecipient, CancellationToken ct)
     {
         var invitation = await _repo.GetByIdAsync(id, ct)
             ?? throw new NotFoundException("Invitation", id);
 
-        EnsureIsRecipient(invitation);
+        if (enforceRecipient) EnsureIsRecipient(invitation);
         EnsurePending(invitation);
 
         invitation.Status = "Rejected";
