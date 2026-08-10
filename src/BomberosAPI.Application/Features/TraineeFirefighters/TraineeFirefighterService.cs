@@ -46,6 +46,12 @@ public class TraineeFirefighterService
 
     public async Task<TraineeFirefighterDto> CreateAsync(CreateTraineeFirefighterRequest request, CancellationToken ct = default)
     {
+        // No tiene sentido pedirle a quien da de alta a un aspirante (o al propio
+        // aspirante, completando su registro por invitación) que se invente un
+        // identificador interno — se genera solo si no llega uno.
+        if (string.IsNullOrWhiteSpace(request.ApplicantCode))
+            request = request with { ApplicantCode = await GenerateUniqueApplicantCodeAsync(ct) };
+
         var validation = await _createValidator.ValidateAsync(request, ct);
         if (await _repo.ExistsByApplicantCodeAsync(request.ApplicantCode, ct))
             throw new ConflictException("Applicant code already in use.");
@@ -103,6 +109,17 @@ public class TraineeFirefighterService
             new Dictionary<string, object?> { ["trainingStatus"] = previousStatus },
             new Dictionary<string, object?> { ["trainingStatus"] = trainee.TrainingStatus },
             ct);
+    }
+
+    private async Task<string> GenerateUniqueApplicantCodeAsync(CancellationToken ct)
+    {
+        for (var attempt = 0; attempt < 10; attempt++)
+        {
+            var candidate = $"BOM-{Random.Shared.Next(100_000, 999_999)}";
+            if (!await _repo.ExistsByApplicantCodeAsync(candidate, ct))
+                return candidate;
+        }
+        throw new BusinessRuleException("No se pudo generar un código de aspirante único. Intenta de nuevo.");
     }
 
     private static TraineeFirefighterDto ToDto(TraineeFirefighter t) => new(

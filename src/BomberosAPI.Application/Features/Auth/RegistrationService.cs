@@ -144,12 +144,12 @@ public class RegistrationService : IRegistrationService
 
         if (role?.Code == BomberosAPI.Application.Common.Constants.Roles.FirefighterTrainee)
         {
-            if (string.IsNullOrWhiteSpace(request.ApplicantCode) || request.BirthDate is null || string.IsNullOrWhiteSpace(request.Sex))
-                throw new BusinessRuleException("Código de aspirante, fecha de nacimiento y sexo son obligatorios.");
+            if (request.BirthDate is null || string.IsNullOrWhiteSpace(request.Sex))
+                throw new BusinessRuleException("Fecha de nacimiento y sexo son obligatorios.");
 
             await _traineeService.CreateAsync(new CreateTraineeFirefighterRequest(
                 newUser.UserId,
-                request.ApplicantCode.Trim(),
+                null, // se genera solo — ver TraineeFirefighterService.CreateAsync
                 request.BirthDate.Value,
                 request.Sex,
                 string.IsNullOrWhiteSpace(request.BloodType) ? null : request.BloodType.Trim(),
