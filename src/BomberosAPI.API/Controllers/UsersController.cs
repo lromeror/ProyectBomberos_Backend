@@ -95,14 +95,22 @@ public class UsersController : ControllerBase
     // de rol — cualquier cuenta autenticada (incluido un aspirante) podía otorgarse
     // SYSTEM_ADMIN a sí misma vía PATCH /users/{miPropioId}/roles. Confirmado en vivo
     // contra la BD local antes de corregirlo.
+    //
+    // ADMIN y FIRE_CHIEF también necesitan llamar a este endpoint para completar el
+    // alta de personal nuevo (PersonasScreen.js llama aquí después de crear el
+    // HealthPersonnel/TraineeFirefighter), así que se les da acceso — pero
+    // UserService.UpdateRolesAsync bloquea que otorguen SYSTEM_ADMIN o ADMIN, para no
+    // reabrir el hueco de escalamiento de privilegios que motivó la restricción original.
     [HttpPatch("{id:guid}/roles")]
-    [Authorize(Roles = Roles.SystemAdmin)]
+    [Authorize(Roles = Roles.SystemAdmin + "," + Roles.Admin + "," + Roles.FireChief)]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(typeof(ApiResponse<object?>), StatusCodes.Status403Forbidden)]
     [ProducesResponseType(typeof(ApiResponse<object?>), StatusCodes.Status404NotFound)]
     [ProducesResponseType(typeof(ApiResponse<object?>), StatusCodes.Status422UnprocessableEntity)]
     public async Task<IActionResult> UpdateRoles(Guid id, [FromBody] UpdateUserRolesRequest request, CancellationToken ct)
     {
-        await _userService.UpdateRolesAsync(id, request.RoleCodes, _currentUser.UserId, ct);
+        await _userService.UpdateRolesAsync(id, request.RoleCodes, _currentUser.UserId,
+            _currentUser.IsInRole(Roles.SystemAdmin), ct);
         return NoContent();
     }
 }

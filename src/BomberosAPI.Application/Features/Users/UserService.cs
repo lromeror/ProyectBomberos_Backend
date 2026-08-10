@@ -1,3 +1,4 @@
+using BomberosAPI.Application.Common.Constants;
 using BomberosAPI.Application.Common.Exceptions;
 using BomberosAPI.Application.Features.Audit;
 using BomberosAPI.Domain.Entities;
@@ -136,7 +137,16 @@ public class UserService
     /// asignaciones que ya no aplican se desactivan (IsActive=false, EndDate=now) en vez
     /// de eliminarse, preservando el historial de quién tuvo qué rol y cuándo.
     /// </summary>
-    public async Task UpdateRolesAsync(Guid userId, IReadOnlyList<string> roleCodes, Guid? actingUserId, CancellationToken ct = default)
+    // Roles que solo SYSTEM_ADMIN puede otorgar — evita que ADMIN/FIRE_CHIEF (que
+    // también llaman a este método para completar el alta de personal nuevo) se
+    // auto-escalen o escalen a otra cuenta a un nivel de privilegio mayor al suyo.
+    private static readonly HashSet<string> PrivilegedRoles = new(StringComparer.OrdinalIgnoreCase)
+    {
+        BomberosAPI.Application.Common.Constants.Roles.SystemAdmin,
+        BomberosAPI.Application.Common.Constants.Roles.Admin,
+    };
+
+    public async Task UpdateRolesAsync(Guid userId, IReadOnlyList<string> roleCodes, Guid? actingUserId, bool actingIsSystemAdmin, CancellationToken ct = default)
     {
         if (await _repo.GetByIdAsync(userId, ct) is null)
             throw new NotFoundException("User", userId);
@@ -144,6 +154,12 @@ public class UserService
         var distinctCodes = (roleCodes ?? Array.Empty<string>()).Distinct().ToList();
         if (distinctCodes.Count == 0)
             throw new BusinessRuleException("A user must have at least one role.");
+
+        // ADMIN y FIRE_CHIEF pueden llegar aquí al completar el alta de personal nuevo
+        // (personal médico / bombero aspirante), pero no pueden otorgar SYSTEM_ADMIN ni
+        // ADMIN — solo SYSTEM_ADMIN puede asignar roles de ese nivel.
+        if (!actingIsSystemAdmin && distinctCodes.Any(c => PrivilegedRoles.Contains(c)))
+            throw new ForbiddenException();
 
         var resolvedRoleIds = new List<Guid>();
         foreach (var code in distinctCodes)
