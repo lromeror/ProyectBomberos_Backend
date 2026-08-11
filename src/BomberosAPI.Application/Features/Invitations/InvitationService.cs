@@ -168,6 +168,7 @@ public class InvitationService
             ?? throw new NotFoundException("Invitation", id);
 
         if (enforceRecipient) EnsureIsRecipient(invitation);
+        else EnsureHasRecipientAccount(invitation);
         EnsurePending(invitation);
         EnsureNotExpired(invitation);
 
@@ -222,6 +223,7 @@ public class InvitationService
             ?? throw new NotFoundException("Invitation", id);
 
         if (enforceRecipient) EnsureIsRecipient(invitation);
+        else EnsureHasRecipientAccount(invitation);
         EnsurePending(invitation);
 
         invitation.Status = "Rejected";
@@ -249,6 +251,19 @@ public class InvitationService
     {
         if (invitation.TargetUserId is not null && invitation.TargetUserId != _currentUser.UserId)
             throw new ForbiddenException("This invitation is not addressed to you.");
+    }
+
+    // El personal de validación solo puede resolver invitaciones de alguien que YA
+    // tiene cuenta (invitado a una sesión, por ejemplo). Las invitaciones por correo a
+    // gente sin cuenta (TargetUserId nulo) se resuelven solas cuando esa persona
+    // completa su registro con el token del correo — si el staff las "aprobara" aquí
+    // primero, la invitación pasaría a Accepted sin crear ningún usuario, y el enlace
+    // de registro de la persona real quedaría inválido (GetPendingInvitationByTokenAsync
+    // exige Status == "Pending").
+    private static void EnsureHasRecipientAccount(Invitation invitation)
+    {
+        if (invitation.TargetUserId is null)
+            throw new BusinessRuleException("Esta invitación es para una persona sin cuenta todavía; se resuelve cuando complete su registro, no desde aquí.");
     }
 
     private static void EnsurePending(Invitation invitation)

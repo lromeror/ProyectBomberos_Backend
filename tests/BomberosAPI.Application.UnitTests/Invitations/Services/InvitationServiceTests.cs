@@ -198,6 +198,50 @@ public class InvitationServiceTests
     }
 
     [Fact]
+    public async Task StaffAcceptAsync_NoRecipientAccountYet_ThrowsBusinessRuleException()
+    {
+        // Invitación por correo a alguien sin cuenta todavía (TargetUserId nulo) — el
+        // staff no debe poder aprobarla, porque eso rompería el enlace de registro de
+        // la persona real (ver EnsureHasRecipientAccount).
+        var id = Guid.NewGuid();
+        var inv = new Invitation { InvitationId = id, Status = "Pending", ExpiresAt = DateTime.UtcNow.AddDays(1), TargetUserId = null };
+        _mockRepo.Setup(r => r.GetByIdAsync(id, It.IsAny<CancellationToken>())).ReturnsAsync(inv);
+
+        var act = async () => await _sut.StaffAcceptAsync(id);
+
+        await act.Should().ThrowAsync<BusinessRuleException>();
+        _mockRepo.Verify(r => r.UpdateAsync(It.IsAny<Invitation>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task StaffRejectAsync_NoRecipientAccountYet_ThrowsBusinessRuleException()
+    {
+        var id = Guid.NewGuid();
+        var inv = new Invitation { InvitationId = id, Status = "Pending", TargetUserId = null };
+        _mockRepo.Setup(r => r.GetByIdAsync(id, It.IsAny<CancellationToken>())).ReturnsAsync(inv);
+
+        var act = async () => await _sut.StaffRejectAsync(id);
+
+        await act.Should().ThrowAsync<BusinessRuleException>();
+        _mockRepo.Verify(r => r.UpdateAsync(It.IsAny<Invitation>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task StaffAcceptAsync_RecipientHasAccount_Succeeds()
+    {
+        // Caso válido: invitado a una sesión que ya tiene cuenta — el staff sí puede
+        // resolverla en su nombre.
+        var id = Guid.NewGuid();
+        var recipientId = Guid.NewGuid();
+        var inv = new Invitation { InvitationId = id, Status = "Pending", ExpiresAt = DateTime.UtcNow.AddDays(1), TargetUserId = recipientId };
+        _mockRepo.Setup(r => r.GetByIdAsync(id, It.IsAny<CancellationToken>())).ReturnsAsync(inv);
+
+        await _sut.StaffAcceptAsync(id);
+
+        inv.Status.Should().Be("Accepted");
+    }
+
+    [Fact]
     public async Task RejectAsync_Pending_ChangesStatusToRejected()
     {
         var id = Guid.NewGuid();
