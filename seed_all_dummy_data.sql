@@ -344,17 +344,26 @@ LEFT JOIN [User] u      ON u.email = i.Email;
 PRINT 'Invitaciones: OK (21)';
 
 -- ============================================================================
---  7. PARTICIPANTES (todos los aspirantes en sesiones finalizadas y en curso)
+--  7. PARTICIPANTES
+--     En sesiones Finalizadas/En curso van con asistencia ya confirmada (así
+--     alimentan signos vitales, bioimpedancia, etc. en las secciones
+--     siguientes). En sesiones Pendientes (Scheduled) van SOLO inscritos, sin
+--     check-in todavía — son los que aparecen al entrar a una capacitación
+--     pendiente para iniciarla y empezar a calificar/tomar signos vitales.
+--     Antes esta sección no cubría 'Scheduled': por eso ninguna capacitación
+--     pendiente mostraba bomberos para evaluar.
 -- ============================================================================
 
 INSERT INTO SessionParticipant (session_participant_id, training_session_id, trainee_firefighter_id,
                                 participation_status, attendance_confirmed, check_in_at, observations)
 SELECT NEWID(), ts.training_session_id, tf.trainee_firefighter_id,
        CASE WHEN ts.status = 'Finished' THEN 'Attended' ELSE 'Registered' END,
-       1, ts.scheduled_start, NULL
+       CASE WHEN ts.status = 'Scheduled' THEN 0 ELSE 1 END,
+       CASE WHEN ts.status = 'Scheduled' THEN NULL ELSE ts.scheduled_start END,
+       NULL
 FROM TrainingSession ts
 CROSS JOIN TraineeFirefighter tf
-WHERE ts.session_code LIKE 'DEMO-%' AND ts.status IN ('Finished','InProgress');
+WHERE ts.session_code LIKE 'DEMO-%' AND ts.status IN ('Finished','InProgress','Scheduled');
 
 PRINT 'Participantes: OK';
 
