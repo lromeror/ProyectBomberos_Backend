@@ -22,6 +22,11 @@ FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS runtime
 WORKDIR /app
 COPY --from=build /app/publish .
 
+# No correr como root dentro del contenedor. La imagen base ya trae el usuario/grupo
+# "app" (uid/gid 64198) sin crearlo a mano.
+RUN chown -R app:app /app
+USER app
+
 # HTTP plano puertas adentro del contenedor (sin certificado configurado, así que
 # UseHttpsRedirection queda como no-op — ver DEPLOY-DOCKER.md). No hace falta tocar
 # Program.cs: sin ASPNETCORE_HTTPS_PORT ni endpoint HTTPS configurado, ese middleware

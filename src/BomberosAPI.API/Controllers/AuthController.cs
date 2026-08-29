@@ -3,6 +3,7 @@ using BomberosAPI.Application.Common.Interfaces;
 using BomberosAPI.Application.Features.Auth;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 
 namespace BomberosAPI.API.Controllers;
 
@@ -29,6 +30,7 @@ public class AuthController : ControllerBase
 
     /// <summary>Autentica un usuario y retorna un JWT firmado.</summary>
     [HttpPost("login")]
+    [EnableRateLimiting("auth")]
     [ProducesResponseType(typeof(ApiResponse<LoginResult>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ApiResponse<object?>), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ApiResponse<object?>), StatusCodes.Status401Unauthorized)]
@@ -69,6 +71,7 @@ public class AuthController : ControllerBase
 
     /// <summary>Genera un token de restablecimiento de contraseña para el email indicado.</summary>
     [HttpPost("forgot-password")]
+    [EnableRateLimiting("auth")]
     [ProducesResponseType(typeof(ApiResponse<ForgotPasswordResult>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ApiResponse<object?>), StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> ForgotPassword([FromBody] ForgotPasswordRequest request, CancellationToken ct)

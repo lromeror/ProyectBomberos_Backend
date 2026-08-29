@@ -5,8 +5,10 @@ using BomberosAPI.Application.Features.TraineeFirefighters;
 using BomberosAPI.Application.Features.TrainingSessions;
 using BomberosAPI.Infrastructure;
 using BomberosAPI.Infrastructure.Persistence;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using Scalar.AspNetCore;
+using System.Threading.RateLimiting;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -58,6 +60,27 @@ builder.Services.AddCors(options =>
               .AllowAnyHeader()
               .AllowAnyMethod()));
 
+// Rate limiting por IP — protege los endpoints de auth anónimos (login, forgot-password)
+// que un script puede golpear directamente sin pasar por el navegador ni por CORS.
+// forgot-password en particular dispara un correo real por cada llamada exitosa: sin
+// esto, unas pocas decenas de solicitudes por minuto (invisibles en las métricas de
+// ancho de banda del proveedor) bastan para bombardear a un usuario real de correos de
+// restablecimiento no solicitados — el vector más probable detrás de un reporte externo
+// de abuso contra el servidor.
+builder.Services.AddRateLimiter(options =>
+{
+    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+
+    options.AddPolicy("auth", httpContext => RateLimitPartition.GetFixedWindowLimiter(
+        partitionKey: httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+        factory: _ => new FixedWindowRateLimiterOptions
+        {
+            PermitLimit = 5,
+            Window = TimeSpan.FromMinutes(1),
+            QueueLimit = 0,
+        }));
+});
+
 // OpenAPI / Scalar / Swagger
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddOpenApi();
@@ -82,6 +105,7 @@ if (!app.Environment.IsProduction())
 
 app.UseHttpsRedirection();
 app.UseCors();
+app.UseRateLimiter();
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
